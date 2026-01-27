@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
+import { MobileGate } from "@/components/mobile-gate";
 import "./globals.css";
 
 // Outfit - modern, friendly, distinctive (Hims/Ro aesthetic)
@@ -25,7 +26,9 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`${font.variable} antialiased`}>
-          <Providers>{children}</Providers>
+          <Providers>
+            <MobileGate>{children}</MobileGate>
+          </Providers>
         </body>
       </html>
     </ClerkProvider>
