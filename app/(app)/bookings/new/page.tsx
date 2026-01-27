@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useImmersiveMode } from "@/components/layouts";
 import {
@@ -234,7 +235,7 @@ const generateDates = () => {
   return dates;
 };
 
-export default function NewBookingPage() {
+function NewBookingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   useImmersiveMode();
@@ -980,5 +981,13 @@ export default function NewBookingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NewBookingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0A0A0A]" />}>
+      <NewBookingPageContent />
+    </Suspense>
   );
 }
