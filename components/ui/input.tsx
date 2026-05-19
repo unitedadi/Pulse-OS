@@ -13,7 +13,8 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type = "text", label, error, hint, leftIcon, rightIcon, id, ...props }, ref) => {
-    const inputId = id || React.useId();
+    const generatedId = React.useId();
+    const inputId = id || generatedId;
 
     return (
       <div className="w-full">
@@ -41,7 +42,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className={cn(
               // Base styles
               "w-full h-10 px-3 text-base rounded-[var(--radius-md)]",
-              "bg-[var(--color-bg-card)] text-[var(--color-text-primary)]",
+              "bg-[var(--color-bg-card)] text-[var(--color-text-primary)] shadow-[var(--shadow-xs)]",
               "border border-[var(--color-border-default)]",
               "transition-all duration-200",
 

@@ -53,7 +53,7 @@ export function SearchInput({
         className
       )}
     >
-      <Search className="absolute left-4 h-5 w-5 text-[#666666] pointer-events-none" />
+      <Search className="absolute left-4 h-5 w-5 text-[var(--color-text-muted)] pointer-events-none" />
       <input
         ref={inputRef}
         type="text"
@@ -62,17 +62,17 @@ export function SearchInput({
         placeholder={placeholder}
         autoFocus={autoFocus}
         className={cn(
-          "w-full h-12 pl-12 pr-10 rounded-xl",
-          "bg-[#111111] border border-[#1F1F1F]",
-          "text-white placeholder-[#666666] text-base font-light",
-          "focus:outline-none focus:border-[#2A2A2A]",
+          "w-full h-12 pl-12 pr-10 rounded-full",
+          "bg-[var(--color-bg-card)] border border-[var(--color-border-default)] shadow-[var(--shadow-xs)]",
+          "text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] text-base",
+          "focus:outline-none focus:border-[var(--color-border-focus)] focus:shadow-[var(--shadow-focus)]",
           "transition-colors"
         )}
       />
       {localValue && (
         <button
           onClick={handleClear}
-          className="absolute right-3 p-1 rounded-full text-[#666666] hover:text-white hover:bg-[#1A1A1A] transition-colors"
+          className="absolute right-3 p-1 rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] transition-colors"
         >
           <X className="h-4 w-4" />
         </button>

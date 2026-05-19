@@ -252,7 +252,7 @@ export default function EditBookingPage() {
               </div>
               <p className="text-white font-light">Home Visit</p>
               <p className="text-xs text-[#666666] mt-1">
-                Nurse visits customer's address
+                Nurse visits customer&apos;s address
               </p>
             </button>
           </div>

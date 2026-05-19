@@ -6,26 +6,26 @@ export default function SignInPage() {
       appearance={{
         elements: {
           formButtonPrimary:
-            "bg-[#119098] hover:bg-[#0d7a81] text-white font-medium rounded-lg",
+            "bg-[#173B3D] hover:bg-[#2D6668] text-white font-medium rounded-full",
           card: "shadow-none",
-          headerTitle: "text-[#2D2A26] font-semibold",
-          headerSubtitle: "text-[#6B6560]",
+          headerTitle: "text-[#173B3D] font-normal",
+          headerSubtitle: "text-[#173B3D]/40",
           socialButtonsBlockButton:
-            "border border-[#E8E4DF] text-[#2D2A26] hover:bg-[#F7F4F0] rounded-lg",
-          formFieldLabel: "text-[#2D2A26] font-medium",
+            "border border-[#173B3D]/15 text-[#173B3D] hover:bg-[#F7EEE0] rounded-full",
+          formFieldLabel: "text-[#173B3D] font-medium",
           formFieldInput:
-            "border-[#E8E4DF] focus:border-[#119098] focus:ring-[#119098]/20 rounded-lg",
-          footerActionLink: "text-[#119098] hover:text-[#0d7a81]",
-          identityPreviewEditButton: "text-[#119098]",
+            "border-[#173B3D]/15 focus:border-[#173B3D] focus:ring-[#173B3D]/15 rounded-[14px]",
+          footerActionLink: "text-[#173B3D] hover:text-[#2D6668]",
+          identityPreviewEditButton: "text-[#173B3D]",
         },
         variables: {
-          colorPrimary: "#119098",
-          colorText: "#2D2A26",
-          colorTextSecondary: "#6B6560",
+          colorPrimary: "#173B3D",
+          colorText: "#173B3D",
+          colorTextSecondary: "rgba(23, 59, 61, 0.4)",
           colorBackground: "#FFFFFF",
           colorInputBackground: "#FFFFFF",
-          colorInputText: "#2D2A26",
-          borderRadius: "8px",
+          colorInputText: "#173B3D",
+          borderRadius: "14px",
         },
       }}
     />

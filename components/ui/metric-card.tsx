@@ -34,9 +34,9 @@ export function MetricCard({
   className,
 }: MetricCardProps) {
   const trendColors = {
-    up: "text-[#4ADE80]",
-    down: "text-[#F87171]",
-    neutral: "text-[#666666]",
+    up: "text-[var(--color-success)]",
+    down: "text-[var(--color-error)]",
+    neutral: "text-[var(--color-text-muted)]",
   };
 
   const trendIcons = {
@@ -46,9 +46,9 @@ export function MetricCard({
   };
 
   const variantStyles = {
-    default: "bg-[#111111] border-[#1F1F1F]",
-    highlight: "bg-[#111111] border-[#E07A3C]/20",
-    muted: "bg-[#0A0A0A] border-[#1A1A1A]",
+    default: "bg-[var(--color-bg-card)] border-[var(--color-border-subtle)] shadow-[var(--shadow-card)]",
+    highlight: "bg-[var(--color-bg-accent)] border-transparent text-[var(--color-text-inverse)] shadow-[var(--shadow-md)]",
+    muted: "bg-[var(--color-bg-secondary)] border-[var(--color-border-subtle)]",
   };
 
   const sizeStyles = {
@@ -89,31 +89,32 @@ export function MetricCard({
           className={cn(
             "uppercase tracking-wider",
             styles.label,
-            variant === "highlight" ? "text-[#E07A3C]" : "text-[#666666]"
+            variant === "highlight" ? "text-white/60" : "text-[var(--color-text-muted)]"
           )}
         >
           {label}
         </span>
         {icon && (
-          <span className="text-[#666666]">{icon}</span>
+          <span className={variant === "highlight" ? "text-white/45" : "text-[var(--color-text-muted)]"}>{icon}</span>
         )}
       </div>
 
       {/* Value */}
       <div className="flex items-baseline gap-2">
         {prefix && (
-          <span className={cn("text-[#666666]", styles.prefix)}>{prefix}</span>
+          <span className={cn(variant === "highlight" ? "text-white/50" : "text-[var(--color-text-muted)]", styles.prefix)}>{prefix}</span>
         )}
         <span
           className={cn(
-            "font-extralight text-white tabular-nums tracking-tight",
+            "font-normal tabular-nums tracking-normal",
+            variant === "highlight" ? "text-white" : "text-[var(--color-text-primary)]",
             styles.value
           )}
         >
           {typeof value === "number" ? value.toLocaleString() : value}
         </span>
         {suffix && (
-          <span className={cn("text-[#666666]", styles.prefix)}>{suffix}</span>
+          <span className={cn(variant === "highlight" ? "text-white/50" : "text-[var(--color-text-muted)]", styles.prefix)}>{suffix}</span>
         )}
       </div>
 
@@ -130,12 +131,12 @@ export function MetricCard({
               {trendIcons[trend.direction]}
               <span>{trend.value}</span>
               {trend.label && (
-                <span className="text-[#666666]">{trend.label}</span>
+                <span className="text-[var(--color-text-muted)]">{trend.label}</span>
               )}
             </div>
           )}
           {subtitle && !trend && (
-            <span className="text-sm text-[#666666]">{subtitle}</span>
+            <span className="text-sm text-[var(--color-text-muted)]">{subtitle}</span>
           )}
         </div>
       )}

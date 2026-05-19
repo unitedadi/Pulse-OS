@@ -2,982 +2,584 @@
 
 import * as React from "react";
 import { Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useImmersiveMode } from "@/components/layouts";
+import { useRouter } from "next/navigation";
+import { Check, Droplet, ExternalLink, FlaskConical, Pill, X } from "lucide-react";
+
+import { useImmersiveMode, usePartnerContext } from "@/components/layouts";
+import { Button } from "@/components/ui";
+import { createPulseCheckoutIntent } from "@/lib/api/pulse-checkout";
 import {
-  X,
-  Check,
-  MapPin,
-  Clock,
-  User,
-  Calendar,
-  ChevronRight,
-  Home,
-  Building2,
-  Search,
-  UserPlus,
-  Users,
-  Lock,
-} from "lucide-react";
-import { Button, Input, PhoneInput } from "@/components/ui";
+  fetchSellerProductsForVertical,
+  fetchSellerVerticals,
+  type PulseCatalogProduct,
+  type PulseVerticalId,
+  type PulseVerticalOption,
+} from "@/lib/api/pulse-catalog";
 import { cn } from "@/lib/utils";
 
-// Mock products data with images
-const PRODUCTS = [
-  {
-    id: "1",
-    name: "IV Therapy",
-    description: "Vitamin-infused IV drip for hydration and wellness",
-    price: 450,
-    duration: "45-60 min",
-    category: "Wellness",
-    image: "/services/skin-therapy.png",
-  },
-  {
-    id: "2",
-    name: "Vitamin Infusion",
-    description: "High-dose vitamin C and B12 for energy",
-    price: 350,
-    duration: "30-45 min",
-    category: "Wellness",
-    image: "/services/skin-therapy.png",
-  },
-  {
-    id: "3",
-    name: "Blood Test",
-    description: "Comprehensive blood panel including CBC",
-    price: 200,
-    duration: "15-20 min",
-    category: "Diagnostics",
-    image: "/services/skin-therapy.png",
-  },
-  {
-    id: "4",
-    name: "Health Checkup",
-    description: "Full body health assessment with vital signs",
-    price: 600,
-    duration: "60-90 min",
-    category: "Checkup",
-    image: "/services/skin-therapy.png",
-  },
-  {
-    id: "5",
-    name: "NAD+ Therapy",
-    description: "Cellular regeneration and anti-aging infusion",
-    price: 850,
-    duration: "90-120 min",
-    category: "Wellness",
-    image: "/services/skin-therapy.png",
-  },
-  {
-    id: "6",
-    name: "Glutathione IV",
-    description: "Antioxidant boost for detox and skin glow",
-    price: 400,
-    duration: "30-45 min",
-    category: "Wellness",
-    image: "/services/skin-therapy.png",
-  },
-];
-
-// Service-based gradient backgrounds
-const getServiceGradient = (service: string) => {
-  const gradients: Record<string, string> = {
-    "IV Therapy": "from-amber-900/80 via-orange-950/60 to-black",
-    "Vitamin Infusion": "from-emerald-900/80 via-teal-950/60 to-black",
-    "Blood Test": "from-rose-900/80 via-red-950/60 to-black",
-    "Health Checkup": "from-sky-900/80 via-blue-950/60 to-black",
-    "NAD+ Therapy": "from-violet-900/80 via-purple-950/60 to-black",
-    "Glutathione IV": "from-pink-900/80 via-fuchsia-950/60 to-black",
-  };
-  return gradients[service] || "from-amber-900/80 via-orange-950/60 to-black";
+const VERTICAL_ICONS: Record<PulseVerticalId, typeof Droplet> = {
+  "iv-drips": Droplet,
+  laboratory: FlaskConical,
+  peptides: Pill,
 };
 
-// Location options
-const LOCATIONS = [
-  { id: "home", name: "Home Visit", icon: Home, description: "We come to the customer" },
-  { id: "clinic", name: "Clinic Visit", icon: Building2, description: "Customer visits clinic" },
-];
+function formatAed(amount: number) {
+  return `AED ${amount.toLocaleString("en-AE", { maximumFractionDigits: 2 })}`;
+}
 
-// Mock existing customers with multiple addresses
-const EXISTING_CUSTOMERS = [
-  {
-    id: "1",
-    name: "Sarah Chen",
-    phone: "+971 50 123 4567",
-    email: "sarah.chen@email.com",
-    addresses: [
-      { label: "Home", address: "Marina Residence Tower A, Apt 2301, Dubai Marina" },
-      { label: "Office", address: "DIFC Gate Building, Level 14, Office 1402" },
-    ]
-  },
-  {
-    id: "2",
-    name: "Mohammed Al-Hassan",
-    phone: "+971 55 234 5678",
-    email: "m.alhassan@email.com",
-    addresses: [
-      { label: "Home", address: "Emaar Beachfront, Beach Vista Tower 1, Apt 1502" },
-    ]
-  },
-  {
-    id: "3",
-    name: "Emma Wilson",
-    phone: "+971 52 345 6789",
-    email: "emma.w@email.com",
-    addresses: [
-      { label: "Home", address: "Downtown Dubai, Burj Vista 2, Apt 3401" },
-      { label: "Office", address: "Business Bay, Aspect Tower, Suite 2305" },
-      { label: "Parents", address: "Al Barsha 1, Villa 42, Street 12" },
-    ]
-  },
-  {
-    id: "4",
-    name: "Ahmed Khalid",
-    phone: "+971 50 456 7890",
-    email: "ahmed.k@email.com",
-    addresses: []
-  },
-  {
-    id: "5",
-    name: "Lisa Park",
-    phone: "+971 56 567 8901",
-    email: "lisa.park@email.com",
-    addresses: [
-      { label: "Home", address: "JBR, Sadaf 4, Apt 1205" },
-    ]
-  },
-  {
-    id: "6",
-    name: "Omar Farouk",
-    phone: "+971 54 678 9012",
-    email: "omar.f@email.com",
-    addresses: [
-      { label: "Home", address: "Business Bay, Executive Towers, Tower H, Apt 2104" },
-      { label: "Office", address: "Dubai Media City, CNN Building, Floor 3" },
-    ]
-  },
-  {
-    id: "7",
-    name: "Priya Sharma",
-    phone: "+971 50 789 0123",
-    email: "priya.s@email.com",
-    addresses: []
-  },
-  {
-    id: "8",
-    name: "David Kim",
-    phone: "+971 55 890 1234",
-    email: "david.kim@email.com",
-    addresses: [
-      { label: "Home", address: "Palm Jumeirah, Golden Mile 9, Apt 302" },
-    ]
-  },
-];
+function checkoutUrlForCurrentEnvironment(checkoutUrl: string) {
+  const overrideBaseUrl =
+    process.env.NEXT_PUBLIC_CHECKOUT_BASE_URL ??
+    "https://checkout.dardoc.com";
 
-// Mock bookings data for edit mode
-const MOCK_BOOKINGS = [
-  {
-    id: "BK-001",
-    productId: "1", // IV Therapy
-    customerId: "1", // Sarah Chen
-    locationType: "home",
-    address: "Marina Residence Tower A, Apt 2301, Dubai Marina",
-    scheduledDate: new Date(2025, 0, 28),
-    scheduledTime: "10:00",
-  },
-  {
-    id: "BK-002",
-    productId: "2", // Vitamin Infusion
-    customerId: "2", // Mohammed Al-Hassan
-    locationType: "home",
-    address: "Emaar Beachfront, Beach Vista Tower 1, Apt 1502",
-    scheduledDate: new Date(2025, 0, 28),
-    scheduledTime: "14:00",
-  },
-  {
-    id: "BK-003",
-    productId: "3", // Blood Test
-    customerId: "3", // Emma Wilson
-    locationType: "clinic",
-    address: "",
-    scheduledDate: new Date(2025, 0, 27),
-    scheduledTime: "16:30",
-  },
-];
+  if (!overrideBaseUrl) return checkoutUrl;
 
-// Generate time slots
-const generateTimeSlots = () => {
-  const slots: { time: string; available: boolean }[] = [];
-  const times = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "14:00", "14:30", "15:00", "15:30",
-    "16:00", "16:30", "17:00", "17:30", "18:00",
-  ];
-  times.forEach((time) => {
-    slots.push({
-      time,
-      available: Math.random() > 0.25,
-    });
-  });
-  return slots;
-};
+  const sourceUrl = new URL(checkoutUrl);
+  const targetBaseUrl = new URL(overrideBaseUrl);
 
-// Generate next 14 days
-const generateDates = () => {
-  const dates = [];
-  const today = new Date();
-  for (let i = 0; i < 14; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    dates.push(date);
+  return `${targetBaseUrl.origin}${sourceUrl.pathname}${sourceUrl.search}${sourceUrl.hash}`;
+}
+
+function DetailBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-t border-[var(--color-border-subtle)] pt-5">
+      <p className="mb-3 text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-soft)]">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function DetailRows({
+  rows,
+}: {
+  rows: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="divide-y divide-[var(--color-border-subtle)] overflow-hidden rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-bg-primary)]">
+      {rows.map((row) => (
+        <div key={`${row.label}-${row.value}`} className="grid grid-cols-[120px_1fr] gap-3 px-3 py-2.5 text-sm">
+          <p className="text-[var(--color-text-muted)]">{row.label}</p>
+          <p className="text-[var(--color-text-primary)]">{row.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProductDetails({
+  product,
+}: {
+  product: PulseCatalogProduct | null;
+}) {
+  if (!product) {
+    return (
+      <aside className="rounded-2xl border border-dashed border-[var(--color-border-default)] p-8 text-center">
+        <p className="text-sm text-[var(--color-text-muted)]">Select a product to review details.</p>
+      </aside>
+    );
   }
-  return dates;
-};
+
+  const highlights = product.highlights ?? [];
+  const ingredients = product.ingredients ?? [];
+  const biomarkers = product.biomarkers ?? [];
+  const categoryTags = product.categoryTags ?? [];
+  const specs = product.specs ?? [];
+  const fullSpecs = product.fullSpecs ?? [];
+  const clinical = product.clinical ?? [];
+  const faqs = product.faqs ?? [];
+  const bundleOffers = product.bundleOffers ?? [];
+
+  return (
+    <aside className="overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)]/45">
+      <div className="border-b border-[var(--color-border-subtle)] bg-[var(--color-bg-primary)] p-5">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">{product.category}</p>
+        <h2 className="mt-2 text-2xl leading-tight text-[var(--color-text-primary)]">{product.name}</h2>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] px-3 py-1.5 text-[var(--color-text-primary)]">
+            {formatAed(product.price)}
+          </span>
+          <span className="rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] px-3 py-1.5 text-[var(--color-text-secondary)]">
+            {product.duration}
+          </span>
+          {product.rating && (
+            <span className="rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)] px-3 py-1.5 text-[var(--color-text-secondary)]">
+              {product.rating.stars.toFixed(1)} rating
+              {product.rating.reviewCount ? ` · ${product.rating.reviewCount} reviews` : ""}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-5 p-5">
+        <div>
+          <p className="text-sm leading-6 text-[var(--color-text-muted)]">{product.description}</p>
+          {product.subtitle && product.subtitle !== product.description && (
+            <p className="mt-2 text-sm leading-6 text-[var(--color-text-soft)]">{product.subtitle}</p>
+          )}
+        </div>
+
+        {categoryTags.length > 0 && (
+          <DetailBlock title="Categories">
+            <div className="flex flex-wrap gap-2">
+              {categoryTags.map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full bg-[var(--color-bg-primary)] px-3 py-1 text-xs text-[var(--color-text-secondary)]"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </DetailBlock>
+        )}
+
+        {specs.length > 0 && (
+          <DetailBlock title="Specs">
+            <DetailRows rows={specs} />
+          </DetailBlock>
+        )}
+
+        {highlights.length > 0 && (
+          <DetailBlock title="Key benefits">
+            <div className="space-y-2">
+              {highlights.map((item) => (
+                <div key={item} className="flex gap-2 text-sm text-[var(--color-text-primary)]">
+                  <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-accent-primary)]" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </DetailBlock>
+        )}
+
+        {ingredients.length > 0 && (
+          <DetailBlock title="Ingredients">
+            <div className="space-y-2">
+              {ingredients.map((item) => (
+                <div key={`${item.title}-${item.detail ?? ""}`} className="text-sm">
+                  <p className="text-[var(--color-text-primary)]">{item.title}</p>
+                  {item.detail && <p className="text-xs text-[var(--color-text-muted)]">{item.detail}</p>}
+                </div>
+              ))}
+            </div>
+          </DetailBlock>
+        )}
+
+        {biomarkers.length > 0 && (
+          <DetailBlock title="Biomarkers">
+            <div className="flex flex-wrap gap-2">
+              {biomarkers.slice(0, 20).map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full bg-[var(--color-bg-primary)] px-3 py-1 text-xs text-[var(--color-text-secondary)]"
+                >
+                  {item}
+                </span>
+              ))}
+              {biomarkers.length > 20 && (
+                <span className="rounded-full bg-[var(--color-bg-primary)] px-3 py-1 text-xs text-[var(--color-text-muted)]">
+                  +{biomarkers.length - 20} more
+                </span>
+              )}
+            </div>
+          </DetailBlock>
+        )}
+
+        {product.howItWorks && (
+          <DetailBlock title="How it works">
+            <p className="text-sm leading-6 text-[var(--color-text-muted)]">{product.howItWorks}</p>
+          </DetailBlock>
+        )}
+
+        {fullSpecs.length > 0 && (
+          <DetailBlock title="Full specs">
+            <DetailRows rows={fullSpecs} />
+          </DetailBlock>
+        )}
+
+        {clinical.length > 0 && (
+          <DetailBlock title="Clinical requirements">
+            <DetailRows rows={clinical} />
+          </DetailBlock>
+        )}
+
+        {product.recommendedUse && (
+          <DetailBlock title="Recommended use">
+            <p className="text-sm leading-6 text-[var(--color-text-muted)]">{product.recommendedUse}</p>
+          </DetailBlock>
+        )}
+
+        {product.prepare && (
+          <DetailBlock title="How to prepare">
+            <p className="text-sm leading-6 text-[var(--color-text-muted)]">{product.prepare}</p>
+          </DetailBlock>
+        )}
+
+        {product.safety && (
+          <DetailBlock title="Safety information">
+            <p className="text-sm leading-6 text-[var(--color-text-muted)]">{product.safety}</p>
+          </DetailBlock>
+        )}
+
+        {product.safetyDisclaimer && product.safetyDisclaimer !== product.safety && (
+          <DetailBlock title="Safety disclaimer">
+            <p className="text-sm leading-6 text-[var(--color-text-muted)]">{product.safetyDisclaimer}</p>
+          </DetailBlock>
+        )}
+
+        {faqs.length > 0 && (
+          <DetailBlock title="FAQs">
+            <div className="space-y-4">
+              {faqs.slice(0, 4).map((item) => (
+                <div key={item.question}>
+                  <p className="text-sm text-[var(--color-text-primary)]">{item.question}</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">{item.answer}</p>
+                </div>
+              ))}
+            </div>
+          </DetailBlock>
+        )}
+
+        {bundleOffers.length > 0 && (
+          <DetailBlock title="Bundle offers">
+            <div className="space-y-2">
+              {bundleOffers.map((offer) => (
+                <div
+                  key={`${offer.label}-${offer.price}`}
+                  className="flex items-center justify-between gap-3 rounded-lg bg-[var(--color-bg-primary)] px-3 py-2.5 text-sm"
+                >
+                  <p className="text-[var(--color-text-primary)]">{offer.label}</p>
+                  <p className="whitespace-nowrap text-[var(--color-text-secondary)]">{formatAed(offer.price)}</p>
+                </div>
+              ))}
+            </div>
+          </DetailBlock>
+        )}
+
+        <p className="text-center text-xs leading-5 text-[var(--color-text-soft)]">
+          Add one or more products, then continue from the checkout bar.
+        </p>
+      </div>
+    </aside>
+  );
+}
 
 function NewBookingPageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { context, loading: contextLoading, error: contextError } = usePartnerContext();
   useImmersiveMode();
 
-  // Edit mode detection
-  const editBookingId = searchParams.get("edit");
-  const isEditMode = !!editBookingId;
-  const editingBooking = isEditMode ? MOCK_BOOKINGS.find(b => b.id === editBookingId) : null;
+  const [verticals, setVerticals] = React.useState<PulseVerticalOption[]>([]);
+  const [selectedVertical, setSelectedVertical] = React.useState<PulseVerticalOption | null>(null);
+  const [verticalsLoading, setVerticalsLoading] = React.useState(true);
+  const [verticalsError, setVerticalsError] = React.useState<string | null>(null);
+  const [products, setProducts] = React.useState<PulseCatalogProduct[]>([]);
+  const [productsLoading, setProductsLoading] = React.useState(false);
+  const [productsError, setProductsError] = React.useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = React.useState<PulseCatalogProduct | null>(null);
+  const [selectedProducts, setSelectedProducts] = React.useState<PulseCatalogProduct[]>([]);
+  const [checkoutLoading, setCheckoutLoading] = React.useState(false);
+  const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
 
-  // Form state
-  const [selectedProduct, setSelectedProduct] = React.useState<typeof PRODUCTS[0] | null>(null);
-  const [customerMode, setCustomerMode] = React.useState<"new" | "existing">("existing");
-  const [selectedCustomer, setSelectedCustomer] = React.useState<typeof EXISTING_CUSTOMERS[0] | null>(null);
-  const [customerSearch, setCustomerSearch] = React.useState("");
-  const [customerName, setCustomerName] = React.useState("");
-  const [customerPhone, setCustomerPhone] = React.useState("");
-  const [customerCountry, setCustomerCountry] = React.useState("AE");
-  const [locationType, setLocationType] = React.useState<string | null>(null);
-  const [address, setAddress] = React.useState("");
-  const [initialized, setInitialized] = React.useState(false);
-
-  // Pre-populate form when editing
   React.useEffect(() => {
-    if (isEditMode && editingBooking && !initialized) {
-      // Find and set product
-      const product = PRODUCTS.find(p => p.id === editingBooking.productId);
-      if (product) setSelectedProduct(product);
-
-      // Find and set customer
-      const customer = EXISTING_CUSTOMERS.find(c => c.id === editingBooking.customerId);
-      if (customer) {
-        setSelectedCustomer(customer);
-        setCustomerMode("existing");
-      }
-
-      // Set location
-      setLocationType(editingBooking.locationType);
-      setAddress(editingBooking.address);
-
-      // Set date and time
-      setSelectedDate(editingBooking.scheduledDate);
-      setSelectedTime(editingBooking.scheduledTime);
-
-      setInitialized(true);
+    if (contextLoading) return;
+    if (!context?.seller_id) {
+      setVerticalsLoading(false);
+      setVerticalsError(contextError ?? "seller_context_missing");
+      return;
     }
-  }, [isEditMode, editingBooking, initialized]);
-  const [selectedAddressIndex, setSelectedAddressIndex] = React.useState<number | "manual" | null>(null);
-  const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = React.useState<string | null>(null);
 
-  // Filter existing customers based on search
-  const filteredCustomers = React.useMemo(() => {
-    if (!customerSearch.trim()) return EXISTING_CUSTOMERS;
-    const query = customerSearch.toLowerCase();
-    return EXISTING_CUSTOMERS.filter(
-      (c) =>
-        c.name.toLowerCase().includes(query) ||
-        c.phone.includes(query) ||
-        c.email.toLowerCase().includes(query)
-    );
-  }, [customerSearch]);
+    const sellerId = context.seller_id;
+    let cancelled = false;
 
-  // Get effective customer name/phone based on mode
-  const effectiveCustomerName = customerMode === "existing" ? selectedCustomer?.name || "" : customerName;
-  const effectiveCustomerPhone = customerMode === "existing" ? selectedCustomer?.phone || "" : customerPhone;
-
-  // Auto-fill address when selecting existing customer with saved address
-  React.useEffect(() => {
-    if (customerMode === "existing" && selectedCustomer?.addresses?.length && locationType === "home") {
-      // Auto-select first address if customer has addresses and nothing selected yet
-      if (selectedAddressIndex === null) {
-        setSelectedAddressIndex(0);
-        setAddress(selectedCustomer.addresses[0].address);
+    async function loadVerticals() {
+      setVerticalsLoading(true);
+      setVerticalsError(null);
+      try {
+        const nextVerticals = await fetchSellerVerticals(sellerId);
+        if (cancelled) return;
+        setVerticals(nextVerticals);
+        if (nextVerticals.length > 0) setSelectedVertical(nextVerticals[0]);
+      } catch (error) {
+        if (!cancelled) setVerticalsError(error instanceof Error ? error.message : "verticals_load_failed");
+      } finally {
+        if (!cancelled) setVerticalsLoading(false);
       }
     }
-  }, [selectedCustomer, customerMode, locationType, selectedAddressIndex]);
 
-  // Update address when selected address index changes (only for saved addresses)
+    void loadVerticals();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [context?.seller_id, contextError, contextLoading]);
+
   React.useEffect(() => {
-    if (customerMode === "existing" && selectedCustomer?.addresses?.length && typeof selectedAddressIndex === "number") {
-      setAddress(selectedCustomer.addresses[selectedAddressIndex].address);
+    if (!context?.seller_id || !selectedVertical) {
+      setProducts([]);
+      return;
     }
-  }, [selectedAddressIndex, selectedCustomer, customerMode]);
 
-  // Reset address selection when customer changes (skip during edit mode initialization)
-  React.useEffect(() => {
-    if (!isEditMode || initialized) {
-      setSelectedAddressIndex(null);
-      setAddress("");
+    const sellerId = context.seller_id;
+    const verticalId = selectedVertical.id;
+    let cancelled = false;
+
+    async function loadProducts() {
+      setProductsLoading(true);
+      setProductsError(null);
+      setSelectedProduct(null);
+      setSelectedProducts([]);
+      setCheckoutError(null);
+      try {
+        const nextProducts = await fetchSellerProductsForVertical(sellerId, verticalId);
+        if (!cancelled) setProducts(nextProducts);
+      } catch (error) {
+        if (!cancelled) {
+          setProducts([]);
+          setProductsError(error instanceof Error ? error.message : "products_load_failed");
+        }
+      } finally {
+        if (!cancelled) setProductsLoading(false);
+      }
     }
-  }, [selectedCustomer]);
 
-  const timeSlots = React.useMemo(() => generateTimeSlots(), [selectedDate]);
-  const dates = React.useMemo(() => generateDates(), []);
+    void loadProducts();
 
-  // Calculate commission (25%)
-  const commission = selectedProduct ? Math.round(selectedProduct.price * 0.25) : 0;
+    return () => {
+      cancelled = true;
+    };
+  }, [context?.seller_id, selectedVertical]);
 
-  // Step completion checks
-  const isServiceComplete = !!selectedProduct;
-  const isCustomerComplete = customerMode === "existing" ? !!selectedCustomer : (customerName.trim() && customerPhone.trim());
-  const isLocationComplete = !!locationType && (locationType !== "home" || address.trim());
-  const isDateTimeComplete = !!selectedDate && !!selectedTime;
+  const selectedProductIds = React.useMemo(
+    () => new Set(selectedProducts.map((product) => product.id)),
+    [selectedProducts]
+  );
+  const selectedCount = selectedProducts.length;
+  const selectedTotal = selectedProducts.reduce((sum, product) => sum + product.price, 0);
 
-  // Section unlock states (all unlocked in edit mode)
-  const canAccessCustomer = isEditMode || isServiceComplete;
-  const canAccessLocation = isEditMode || (isServiceComplete && isCustomerComplete);
-  const canAccessDateTime = isEditMode || (isServiceComplete && isCustomerComplete && isLocationComplete);
-
-  // Check if booking is complete
-  const isComplete = isServiceComplete && isCustomerComplete && isLocationComplete && isDateTimeComplete;
-
-  const handleConfirm = () => {
-    console.log(isEditMode ? "Updating booking:" : "Creating booking:", {
-      bookingId: editBookingId,
-      product: selectedProduct,
-      customer: customerMode === "existing"
-        ? selectedCustomer
-        : { name: customerName, phone: customerPhone },
-      location: { type: locationType, address },
-      date: selectedDate,
-      time: selectedTime,
+  function toggleProduct(product: PulseCatalogProduct) {
+    setSelectedProduct(product);
+    setCheckoutError(null);
+    setSelectedProducts((current) => {
+      if (current.some((item) => item.id === product.id)) {
+        return current.filter((item) => item.id !== product.id);
+      }
+      return [...current, product];
     });
-    // Navigate back to the booking detail if editing, otherwise to bookings list
-    router.push(isEditMode ? `/bookings/${editBookingId}` : "/bookings");
-  };
+  }
 
-  const formatDate = (date: Date) => {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
+  async function handleCreateCheckout() {
+    if (!context?.seller_id || !context.customer_id || selectedProducts.length === 0 || checkoutLoading) return;
 
-    if (date.toDateString() === today.toDateString()) return "Today";
-    if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
-    return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-  };
-
-  const formatFullDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
-  };
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+    try {
+      const origin = window.location.origin;
+        const intent = await createPulseCheckoutIntent({
+          sellerId: context.seller_id,
+          customerId: context.customer_id,
+          products: selectedProducts,
+          returnUrl: `${origin}/bookings`,
+          cancelUrl: `${origin}/bookings/new`,
+        });
+        window.location.href = checkoutUrlForCurrentEnvironment(intent.checkout_url);
+      } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "checkout_link_failed");
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }
 
   return (
-    <div className="h-screen overflow-hidden bg-[#0A0A0A] relative">
-      {/* Close Button - Fixed top left */}
+    <div className="min-h-[100dvh] overflow-hidden bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
       <button
-        onClick={() => router.back()}
-        className="absolute top-6 left-6 z-50 h-10 w-10 rounded-full flex items-center justify-center text-[#666666] hover:bg-white hover:text-black transition-all"
+        onClick={() => router.push("/dashboard")}
+        className="absolute left-6 top-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-default)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent-primary)] hover:text-[var(--color-accent-primary)]"
       >
         <X className="h-5 w-5" />
       </button>
 
-      <div className="flex h-full">
-        {/* Left Panel - Selection Form */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto p-8 space-y-12">
-            {/* Section 1: Service Selection */}
-            <section>
-              <div className="mb-6">
-                <h2 className="text-3xl font-extralight text-white mb-2">Select a service</h2>
-                <p className="text-[#666666] text-sm">What wellness experience are you booking?</p>
-              </div>
+      <main className="h-[100dvh] overflow-y-auto pb-32">
+        <div className="mx-auto max-w-7xl px-8 py-12">
+          <header className="mb-8 max-w-3xl">
+            <p className="mb-2 text-[11px] uppercase tracking-[0.22em] text-[var(--color-text-soft)]">New booking</p>
+            <h1 className="text-3xl font-normal text-[var(--color-text-primary)]">New Booking</h1>
+            <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
+              Choose the seller&apos;s product here. Checkout will collect the member, address, slot, and payment.
+            </p>
+          </header>
 
-              <div className="grid grid-cols-2 gap-4">
-                {PRODUCTS.map((product) => (
-                  <button
-                    key={product.id}
-                    onClick={() => setSelectedProduct(product)}
-                    className="group text-left"
-                  >
-                    <div
-                      className={cn(
-                        "relative rounded-2xl overflow-hidden h-[160px] transition-all",
-                        selectedProduct?.id === product.id
-                          ? "ring-2 ring-[#E07A3C] ring-offset-2 ring-offset-[#0A0A0A]"
-                          : "hover:ring-1 hover:ring-white/20"
-                      )}
-                    >
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <div className={cn("absolute inset-0 bg-gradient-to-br", getServiceGradient(product.name))} />
-
-                      {/* Selection indicator */}
-                      {selectedProduct?.id === product.id && (
-                        <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-[#E07A3C] flex items-center justify-center">
-                          <Check className="h-4 w-4 text-white" />
-                        </div>
-                      )}
-
-                      <div className="absolute inset-0 p-4 flex flex-col justify-end">
-                        <p className="text-white/50 text-xs uppercase tracking-widest mb-1">{product.category}</p>
-                        <h3 className="text-lg font-light text-white">{product.name}</h3>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-white/60 text-xs">{product.duration}</span>
-                          <span className="text-white text-sm">AED {product.price}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {/* Section 2: Customer Details */}
-            <section className={cn("relative", !canAccessCustomer && "pointer-events-none")}>
-              {/* Locked Overlay */}
-              {!canAccessCustomer && (
-                <div className="absolute inset-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10 rounded-2xl flex items-center justify-center">
-                  <div className="flex items-center gap-2 text-[#555555]">
-                    <Lock className="h-4 w-4" />
-                    <span className="text-sm">Select a service first</span>
-                  </div>
+          <section className="mb-8">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {verticalsLoading ? (
+                <div className="col-span-full rounded-lg border border-[var(--color-border-subtle)] px-4 py-5 text-sm text-[var(--color-text-muted)]">
+                  Loading enrolled verticals...
                 </div>
-              )}
-              <div className={cn("mb-6", !canAccessCustomer && "opacity-30")}>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-3xl font-extralight text-white">Customer</h2>
-                  {isCustomerComplete && (
-                    <div className="h-6 w-6 rounded-full bg-[#E07A3C] flex items-center justify-center">
-                      <Check className="h-4 w-4 text-white" />
-                    </div>
-                  )}
+              ) : verticalsError ? (
+                <div className="col-span-full rounded-lg border border-[var(--color-border-subtle)] px-4 py-5 text-sm text-[var(--color-text-muted)]">
+                  Couldn&apos;t load enrolled verticals. {verticalsError}
                 </div>
-                <p className="text-[#666666] text-sm">
-                  {isEditMode ? "Booking for this customer" : "Select an existing customer or add a new one"}
-                </p>
-              </div>
-
-              {/* Edit Mode: Read-only customer display */}
-              {isEditMode && selectedCustomer && (
-                <div className="p-4 rounded-xl bg-[#111111] border border-[#1F1F1F] flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-full bg-[#E07A3C] flex items-center justify-center text-white font-medium">
-                    {selectedCustomer.name.split(" ").map((n) => n[0]).join("")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-light">{selectedCustomer.name}</p>
-                    <p className="text-[#666666] text-sm">{selectedCustomer.phone}</p>
-                    {selectedCustomer.email && (
-                      <p className="text-[#555555] text-xs">{selectedCustomer.email}</p>
-                    )}
-                  </div>
+              ) : verticals.length === 0 ? (
+                <div className="col-span-full rounded-lg border border-[var(--color-border-subtle)] px-4 py-5 text-sm text-[var(--color-text-muted)]">
+                  This seller is not enrolled in any bookable verticals yet.
                 </div>
-              )}
-
-              {/* Create Mode: Full customer selection */}
-              {!isEditMode && (
-                <>
-                  {/* Toggle: Existing / New */}
-                  <div className={cn("flex gap-2 mb-6", !canAccessCustomer && "opacity-30")}>
-                    <button
-                      onClick={() => setCustomerMode("existing")}
-                      className={cn(
-                        "flex-1 flex items-center justify-center gap-2 py-3 rounded-full border transition-all text-sm",
-                        customerMode === "existing"
-                          ? "bg-white text-black border-white"
-                          : "bg-transparent text-[#666666] border-[#2A2A2A] hover:border-[#3A3A3A] hover:text-white"
-                      )}
-                    >
-                      <Users className="h-4 w-4" />
-                      Existing
-                    </button>
-                    <button
-                      onClick={() => setCustomerMode("new")}
-                      className={cn(
-                        "flex-1 flex items-center justify-center gap-2 py-3 rounded-full border transition-all text-sm",
-                        customerMode === "new"
-                          ? "bg-white text-black border-white"
-                          : "bg-transparent text-[#666666] border-[#2A2A2A] hover:border-[#3A3A3A] hover:text-white"
-                      )}
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      New
-                    </button>
-                  </div>
-
-                  {/* Existing Customer Search */}
-                  {customerMode === "existing" && (
-                    <div className={cn("space-y-4", !canAccessCustomer && "opacity-30")}>
-                      {/* Search Input */}
-                      <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#555555]" />
-                        <input
-                          type="text"
-                          value={customerSearch}
-                          onChange={(e) => setCustomerSearch(e.target.value)}
-                          placeholder="Search by name, phone, or email..."
-                          className="w-full pl-11 pr-4 py-3 bg-[#111111] border border-[#1F1F1F] rounded-xl text-white placeholder:text-[#555555] transition-colors text-sm focus:border-[#2A2A2A]"
-                          style={{ outline: "none", boxShadow: "none" }}
-                        />
-                      </div>
-
-                      {/* Customer List */}
-                      <div className="space-y-2 max-h-[280px] overflow-y-auto">
-                        {filteredCustomers.map((customer) => (
-                          <button
-                            key={customer.id}
-                            onClick={() => setSelectedCustomer(customer)}
-                            className={cn(
-                              "w-full text-left p-4 rounded-xl border transition-all flex items-center gap-4",
-                              selectedCustomer?.id === customer.id
-                                ? "bg-[#1A1A1A] border-[#E07A3C]"
-                                : "bg-[#111111] border-[#1F1F1F] hover:border-[#2A2A2A]"
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                "h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium",
-                                selectedCustomer?.id === customer.id
-                                  ? "bg-[#E07A3C] text-white"
-                                  : "bg-[#1A1A1A] text-[#666666]"
-                              )}
-                            >
-                              {customer.name.split(" ").map((n) => n[0]).join("")}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="text-white text-sm font-light truncate">{customer.name}</p>
-                                {customer.addresses.length > 0 && (
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    <MapPin className="h-3 w-3 text-[#E07A3C]" />
-                                    {customer.addresses.length > 1 && (
-                                      <span className="text-[#E07A3C] text-xs">{customer.addresses.length}</span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-[#666666] text-xs truncate">{customer.phone}</p>
-                            </div>
-                            {selectedCustomer?.id === customer.id && (
-                              <div className="h-5 w-5 rounded-full bg-[#E07A3C] flex items-center justify-center">
-                                <Check className="h-3 w-3 text-white" />
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                        {filteredCustomers.length === 0 && (
-                          <div className="text-center py-8">
-                            <p className="text-[#555555] text-sm">No customers found</p>
-                            <button
-                              onClick={() => setCustomerMode("new")}
-                              className="text-[#E07A3C] text-sm mt-2 hover:underline"
-                            >
-                              Add a new customer
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* New Customer Form */}
-                  {customerMode === "new" && (
-                    <div className={cn("space-y-4", !canAccessCustomer && "opacity-30")}>
-                      <div>
-                        <label className="block text-sm text-[#A0A0A0] mb-2">Full name</label>
-                        <Input
-                          value={customerName}
-                          onChange={(e) => setCustomerName(e.target.value)}
-                          placeholder="Enter customer's full name"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm text-[#A0A0A0] mb-2">Phone number</label>
-                        <PhoneInput
-                          value={customerPhone}
-                          countryCode={customerCountry}
-                          onChange={(phone, country) => {
-                            setCustomerPhone(phone);
-                            if (country) setCustomerCountry(country);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </section>
-
-            {/* Section 3: Location */}
-            <section className={cn("relative", !canAccessLocation && "pointer-events-none")}>
-              {/* Locked Overlay */}
-              {!canAccessLocation && (
-                <div className="absolute inset-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10 rounded-2xl flex items-center justify-center">
-                  <div className="flex items-center gap-2 text-[#555555]">
-                    <Lock className="h-4 w-4" />
-                    <span className="text-sm">{!isServiceComplete ? "Select a service first" : "Enter customer details first"}</span>
-                  </div>
-                </div>
-              )}
-              <div className={cn("mb-6", !canAccessLocation && "opacity-30")}>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-3xl font-extralight text-white">Service location</h2>
-                  {isLocationComplete && (
-                    <div className="h-6 w-6 rounded-full bg-[#E07A3C] flex items-center justify-center">
-                      <Check className="h-4 w-4 text-white" />
-                    </div>
-                  )}
-                </div>
-                <p className="text-[#666666] text-sm">Where should we provide the service?</p>
-              </div>
-
-              <div className={cn("space-y-3", !canAccessLocation && "opacity-30")}>
-                {LOCATIONS.map((location) => {
-                  const Icon = location.icon;
+              ) : (
+                verticals.map((vertical) => {
+                  const Icon = VERTICAL_ICONS[vertical.id];
                   return (
                     <button
-                      key={location.id}
-                      onClick={() => setLocationType(location.id)}
+                      key={vertical.id}
+                      onClick={() => {
+                        setSelectedVertical(vertical);
+                        setSelectedProduct(null);
+                        setSelectedProducts([]);
+                        setCheckoutError(null);
+                      }}
                       className={cn(
-                        "w-full text-left p-4 rounded-2xl border transition-all flex items-center gap-4",
-                        locationType === location.id
-                          ? "bg-[#1A1A1A] border-[#E07A3C]"
-                          : "bg-[#111111] border-[#1F1F1F] hover:border-[#2A2A2A]"
+                        "grid grid-cols-[44px_1fr_auto] items-center gap-4 rounded-lg border p-4 text-left transition-colors",
+                        selectedVertical?.id === vertical.id
+                          ? "border-[var(--color-accent-primary)] bg-[var(--color-bg-secondary)]"
+                          : "border-[var(--color-border-subtle)] bg-transparent hover:border-[var(--color-border-hover)]"
                       )}
                     >
                       <div
                         className={cn(
-                          "h-12 w-12 rounded-xl flex items-center justify-center",
-                          locationType === location.id
-                            ? "bg-[#E07A3C]/20 text-[#E07A3C]"
-                            : "bg-[#1A1A1A] text-[#666666]"
+                          "flex h-11 w-11 items-center justify-center rounded-full",
+                          selectedVertical?.id === vertical.id
+                            ? "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)]"
+                            : "bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]"
                         )}
                       >
                         <Icon className="h-5 w-5" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-white font-light">{location.name}</h3>
-                        <p className="text-[#666666] text-sm">{location.description}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-normal text-[var(--color-text-primary)]">{vertical.title}</p>
+                        <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">{vertical.description}</p>
+                        <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[var(--color-text-soft)]">
+                          {vertical.productCount} active product{vertical.productCount === 1 ? "" : "s"}
+                        </p>
                       </div>
-                      <div
+                      <span
                         className={cn(
-                          "h-6 w-6 rounded-full flex items-center justify-center",
-                          locationType === location.id
-                            ? "bg-[#E07A3C] text-white"
-                            : "border border-[#2A2A2A]"
+                          "flex h-7 w-7 items-center justify-center rounded-full border transition-colors",
+                          selectedVertical?.id === vertical.id
+                            ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)]"
+                            : "border-[var(--color-border-default)] text-transparent"
                         )}
                       >
-                        {locationType === location.id && <Check className="h-4 w-4" />}
-                      </div>
+                        <Check className="h-4 w-4" />
+                      </span>
                     </button>
                   );
-                })}
+                })
+              )}
+            </div>
+          </section>
+
+          <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-start">
+            <div>
+              <div className="mb-4">
+                <h2 className="text-xl font-normal text-[var(--color-text-primary)]">Products</h2>
+                <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                  {selectedVertical
+                    ? `Showing ${selectedVertical.title} products from the active DarDoc catalog.`
+                    : "Select a vertical to see available products."}
+                </p>
               </div>
 
-              {/* Address input for home visits */}
-              {locationType === "home" && (
-                <div className={cn("mt-4 space-y-3", !canAccessLocation && "opacity-30")}>
-                  <label className="text-sm text-[#A0A0A0]">Customer's address</label>
-
-                  {/* Show saved addresses if customer has any */}
-                  {customerMode === "existing" && selectedCustomer?.addresses && selectedCustomer.addresses.length > 0 && (
-                    <div className="space-y-2">
-                      {selectedCustomer.addresses.map((addr, index) => (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            setSelectedAddressIndex(index);
-                            setAddress(addr.address);
-                          }}
-                          className={cn(
-                            "w-full text-left p-3 rounded-xl border transition-all flex items-center gap-3",
-                            selectedAddressIndex === index
-                              ? "bg-[#1A1A1A] border-[#E07A3C]"
-                              : "bg-[#111111] border-[#1F1F1F] hover:border-[#2A2A2A]"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0",
-                              selectedAddressIndex === index
-                                ? "bg-[#E07A3C]/20 text-[#E07A3C]"
-                                : "bg-[#1A1A1A] text-[#666666]"
-                            )}
-                          >
-                            {addr.label === "Home" ? <Home className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm font-light">{addr.label}</p>
-                            <p className="text-[#666666] text-xs truncate">{addr.address}</p>
-                          </div>
-                          {selectedAddressIndex === index && (
-                            <div className="h-5 w-5 rounded-full bg-[#E07A3C] flex items-center justify-center flex-shrink-0">
-                              <Check className="h-3 w-3 text-white" />
-                            </div>
-                          )}
-                        </button>
-                      ))}
-
-                      {/* Option to use different address */}
-                      <button
-                        onClick={() => {
-                          setSelectedAddressIndex("manual");
-                          setAddress("");
-                        }}
-                        className={cn(
-                          "w-full text-left p-3 rounded-xl border transition-all flex items-center gap-3",
-                          selectedAddressIndex === "manual"
-                            ? "bg-[#1A1A1A] border-[#E07A3C]"
-                            : "bg-[#111111] border-[#1F1F1F] hover:border-[#2A2A2A]"
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0",
-                            selectedAddressIndex === "manual"
-                              ? "bg-[#E07A3C]/20 text-[#E07A3C]"
-                              : "bg-[#1A1A1A] text-[#666666]"
-                          )}
-                        >
-                          <MapPin className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-light">Different address</p>
-                          <p className="text-[#666666] text-xs">Enter a new location</p>
-                        </div>
-                        {selectedAddressIndex === "manual" && (
-                          <div className="h-5 w-5 rounded-full bg-[#E07A3C] flex items-center justify-center flex-shrink-0">
-                            <Check className="h-3 w-3 text-white" />
-                          </div>
-                        )}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Manual input - show if new customer, no saved addresses, or "Different address" selected */}
-                  {(customerMode === "new" ||
-                    !selectedCustomer?.addresses?.length ||
-                    selectedAddressIndex === "manual") && (
-                    <Input
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Building name, street, area, city"
-                    />
-                  )}
-                </div>
-              )}
-            </section>
-
-            {/* Section 4: Date & Time */}
-            <section className={cn("pb-12 relative", !canAccessDateTime && "pointer-events-none")}>
-              {/* Locked Overlay */}
-              {!canAccessDateTime && (
-                <div className="absolute inset-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10 rounded-2xl flex items-center justify-center">
-                  <div className="flex items-center gap-2 text-[#555555]">
-                    <Lock className="h-4 w-4" />
-                    <span className="text-sm">
-                      {!isServiceComplete ? "Select a service first" : !isCustomerComplete ? "Enter customer details first" : "Select a location first"}
-                    </span>
+              <div className="overflow-hidden rounded-xl border border-[var(--color-border-subtle)]">
+                {!selectedVertical ? (
+                  <div className="px-4 py-6 text-sm text-[var(--color-text-muted)]">Choose a vertical first.</div>
+                ) : productsLoading ? (
+                  <div className="px-4 py-6 text-sm text-[var(--color-text-muted)]">Loading products...</div>
+                ) : productsError ? (
+                  <div className="px-4 py-6 text-sm text-[var(--color-text-muted)]">Couldn&apos;t load products. {productsError}</div>
+                ) : products.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-[var(--color-text-muted)]">
+                    No active products found for {selectedVertical.title}.
                   </div>
-                </div>
-              )}
-              <div className={cn("mb-6", !canAccessDateTime && "opacity-30")}>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-3xl font-extralight text-white">Date & time</h2>
-                  {isDateTimeComplete && (
-                    <div className="h-6 w-6 rounded-full bg-[#E07A3C] flex items-center justify-center">
-                      <Check className="h-4 w-4 text-white" />
-                    </div>
-                  )}
-                </div>
-                <p className="text-[#666666] text-sm">When should we schedule the appointment?</p>
-              </div>
-
-              {/* Date Selection - Horizontal scroll */}
-              <div className={cn("mb-8", !canAccessDateTime && "opacity-30")}>
-                <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2">
-                  {dates.map((date) => (
-                    <button
-                      key={date.toISOString()}
-                      onClick={() => setSelectedDate(date)}
-                      className={cn(
-                        "flex-shrink-0 px-4 py-3 rounded-2xl border transition-all text-center min-w-[90px]",
-                        selectedDate?.toDateString() === date.toDateString()
-                          ? "bg-white text-black border-white"
-                          : "bg-[#111111] border-[#1F1F1F] text-white hover:border-[#2A2A2A]"
-                      )}
-                    >
-                      <p className="text-xs opacity-60">
-                        {date.toLocaleDateString("en-US", { weekday: "short" })}
-                      </p>
-                      <p className="text-lg font-light">{date.getDate()}</p>
-                      <p className="text-xs opacity-60">
-                        {date.toLocaleDateString("en-US", { month: "short" })}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Time Slots */}
-              {selectedDate && (
-                <div className={cn(!canAccessDateTime && "opacity-30")}>
-                  <p className="text-sm text-[#666666] mb-4 flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Available times for {formatDate(selectedDate)}
-                  </p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {timeSlots.map((slot) => (
+                ) : (
+                  <div className="divide-y divide-[var(--color-border-subtle)]">
+                    {products.map((product) => (
                       <button
-                        key={slot.time}
-                        onClick={() => slot.available && setSelectedTime(slot.time)}
-                        disabled={!slot.available}
+                        key={product.id}
+                        onClick={() => toggleProduct(product)}
                         className={cn(
-                          "py-3 rounded-xl text-sm transition-all",
-                          !slot.available
-                            ? "bg-[#111111] text-[#333333] cursor-not-allowed"
-                            : selectedTime === slot.time
-                            ? "bg-[#E07A3C] text-white"
-                            : "bg-[#111111] text-white border border-[#1F1F1F] hover:border-[#2A2A2A]"
+                          "grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-5 p-4 text-left transition-colors",
+                          selectedProductIds.has(product.id)
+                            ? "bg-[var(--color-accent-primary)]/5"
+                            : "bg-transparent hover:bg-[var(--color-bg-secondary)]/60"
                         )}
                       >
-                        {slot.time}
+                        <div className="min-w-0">
+                          <p className="product-cell-title text-[15px] leading-5 text-[var(--color-text-primary)]">{product.name}</p>
+                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">{product.category} · {product.duration}</p>
+                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--color-text-soft)]">{product.description}</p>
+                        </div>
+                        <div className="min-w-[92px] text-right">
+                          <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-text-soft)]">Price</p>
+                          <p className="mt-1 whitespace-nowrap text-sm text-[var(--color-text-primary)]">{formatAed(product.price)}</p>
+                        </div>
+                        <span
+                          className={cn(
+                            "flex h-7 w-7 items-center justify-center rounded-full border transition-colors",
+                            selectedProductIds.has(product.id)
+                              ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)]"
+                              : "border-[var(--color-border-default)] text-transparent"
+                          )}
+                        >
+                          <Check className="h-4 w-4" />
+                        </span>
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
-            </section>
-          </div>
-        </div>
-
-        {/* Right Panel - Sticky Summary */}
-        <div className="w-[400px] flex-shrink-0 border-l border-[#1A1A1A] flex flex-col h-full">
-          {/* Summary Content */}
-          <div className="flex-1 p-6 overflow-y-auto">
-            {/* Selected Service */}
-            {selectedProduct ? (
-              <div className="mb-6">
-                <div className="relative rounded-2xl overflow-hidden h-32">
-                  <img
-                    src={selectedProduct.image}
-                    alt={selectedProduct.name}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className={cn("absolute inset-0 bg-gradient-to-br", getServiceGradient(selectedProduct.name))} />
-                  <div className="absolute inset-0 p-4 flex flex-col justify-end">
-                    <p className="text-white/60 text-xs uppercase tracking-widest">{selectedProduct.category}</p>
-                    <h3 className="text-xl font-light text-white">{selectedProduct.name}</h3>
-                    <p className="text-white/60 text-sm">{selectedProduct.duration}</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="mb-6 rounded-2xl border border-dashed border-[#2A2A2A] h-32 flex items-center justify-center">
-                <p className="text-[#555555] text-sm">Select a service</p>
-              </div>
-            )}
-
-            {/* Summary Items */}
-            <div className="space-y-4">
-              {/* Customer */}
-              <div className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-full bg-[#1A1A1A] flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4 text-[#555555]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[#555555] text-xs uppercase tracking-wider mb-0.5">Customer</p>
-                  {effectiveCustomerName ? (
-                    <>
-                      <p className="text-white text-sm font-light truncate">{effectiveCustomerName}</p>
-                      {effectiveCustomerPhone && <p className="text-[#666666] text-xs">{effectiveCustomerPhone}</p>}
-                    </>
-                  ) : (
-                    <p className="text-[#555555] text-sm">Not selected</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Location */}
-              <div className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-full bg-[#1A1A1A] flex items-center justify-center flex-shrink-0">
-                  <MapPin className="h-4 w-4 text-[#555555]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[#555555] text-xs uppercase tracking-wider mb-0.5">Location</p>
-                  {locationType ? (
-                    <>
-                      <p className="text-white text-sm font-light">
-                        {LOCATIONS.find(l => l.id === locationType)?.name}
-                      </p>
-                      {address && <p className="text-[#666666] text-xs truncate">{address}</p>}
-                    </>
-                  ) : (
-                    <p className="text-[#555555] text-sm">Not selected</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Date & Time */}
-              <div className="flex items-start gap-3">
-                <div className="h-8 w-8 rounded-full bg-[#1A1A1A] flex items-center justify-center flex-shrink-0">
-                  <Calendar className="h-4 w-4 text-[#555555]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[#555555] text-xs uppercase tracking-wider mb-0.5">Date & Time</p>
-                  {selectedDate && selectedTime ? (
-                    <>
-                      <p className="text-white text-sm font-light">{formatFullDate(selectedDate)}</p>
-                      <p className="text-[#E07A3C] text-xs">{selectedTime}</p>
-                    </>
-                  ) : (
-                    <p className="text-[#555555] text-sm">Not selected</p>
-                  )}
-                </div>
+                )}
               </div>
             </div>
-          </div>
 
-          {/* Price & Confirm */}
-          <div className="p-6 border-t border-[#1A1A1A] space-y-4">
-            {/* Price Breakdown */}
-            {selectedProduct && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#666666]">Service price</span>
-                  <span className="text-white font-light">AED {selectedProduct.price}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#E07A3C]">Your commission</span>
-                  <span className="text-[#E07A3C]">+AED {commission}</span>
-                </div>
-              </div>
+            <div className="lg:sticky lg:top-8">
+              <ProductDetails
+                product={selectedProduct}
+              />
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--color-border-subtle)] bg-[var(--color-bg-primary)]/95 px-8 py-4 shadow-lg backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-normal text-[var(--color-text-primary)]">
+              {selectedCount > 0
+                ? `${selectedCount} item${selectedCount === 1 ? "" : "s"} selected`
+                : "Select products to create checkout"}
+            </p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              {selectedCount > 0
+                ? `Total ${formatAed(selectedTotal)}`
+                : "Member, address, slot, and payment happen on checkout.dardoc.com."}
+            </p>
+            {checkoutError && (
+              <p className="mt-2 text-xs text-[var(--color-error)]">{checkoutError}</p>
             )}
-
-            {/* Confirm Button */}
-            <Button
-              variant="accent"
-              fullWidth
-              disabled={!isComplete}
-              onClick={handleConfirm}
-              leftIcon={<Check className="h-4 w-4" />}
-            >
-              {isEditMode ? "Save Changes" : "Confirm Booking"}
-            </Button>
           </div>
+
+          <Button
+            variant="primary"
+            disabled={selectedCount === 0}
+            loading={checkoutLoading}
+            onClick={handleCreateCheckout}
+            rightIcon={<ExternalLink className="h-4 w-4" />}
+            className="w-full sm:w-auto sm:min-w-[220px]"
+          >
+            Continue to checkout
+          </Button>
         </div>
       </div>
     </div>
@@ -986,7 +588,7 @@ function NewBookingPageContent() {
 
 export default function NewBookingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0A0A0A]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[var(--color-bg-primary)]" />}>
       <NewBookingPageContent />
     </Suspense>
   );

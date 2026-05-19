@@ -55,27 +55,27 @@ Badge.displayName = "Badge";
 const STATUS_CONFIG: Record<BookingStatus, { label: string; className: string }> = {
   draft: {
     label: "Draft",
-    className: "bg-[#F3F2F0] text-[var(--color-status-draft)]",
+    className: "bg-[var(--color-bg-secondary)] text-[var(--color-status-draft)]",
   },
   pending_payment: {
     label: "Pending Payment",
-    className: "bg-[#FDF6E9] text-[var(--color-status-pending)]",
+    className: "bg-[var(--color-warning-light)] text-[var(--color-status-pending)]",
   },
   expired: {
     label: "Expired",
-    className: "bg-[#F3F2F0] text-[var(--color-status-cancelled)] line-through",
+    className: "bg-[var(--color-bg-secondary)] text-[var(--color-status-cancelled)] line-through",
   },
   paid: {
     label: "Paid",
-    className: "bg-[#EFF6FF] text-[var(--color-status-paid)]",
+    className: "bg-[var(--color-success-light)] text-[var(--color-status-paid)]",
   },
   upcoming: {
     label: "Upcoming",
-    className: "bg-[#E6F4F5] text-[#119098]",
+    className: "bg-[var(--color-bg-secondary)] text-[var(--color-accent-primary)]",
   },
   in_progress: {
     label: "In Progress",
-    className: "bg-[#F3F0FF] text-[var(--color-status-in-progress)]",
+    className: "bg-[var(--color-info-light)] text-[var(--color-status-in-progress)]",
   },
   completed: {
     label: "Completed",
@@ -83,11 +83,11 @@ const STATUS_CONFIG: Record<BookingStatus, { label: string; className: string }>
   },
   cancelled: {
     label: "Cancelled",
-    className: "bg-[#F3F2F0] text-[var(--color-status-cancelled)] line-through",
+    className: "bg-[var(--color-bg-secondary)] text-[var(--color-status-cancelled)] line-through",
   },
   refunded: {
     label: "Refunded",
-    className: "bg-[#FEF3C7] text-[var(--color-status-refunded)]",
+    className: "bg-[var(--color-warning-light)] text-[var(--color-status-refunded)]",
   },
   no_show: {
     label: "No Show",

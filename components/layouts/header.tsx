@@ -26,14 +26,14 @@ export function Header({ onMenuClick, currentTime, children }: HeaderProps) {
   };
 
   return (
-    <div className="sticky top-0 z-40 bg-[#0A0A0A] pt-6">
+    <div className="sticky top-0 z-40 bg-[var(--color-bg-primary)]/95 pt-6 backdrop-blur-xl">
       <header className="h-12 flex items-center justify-between px-6 lg:px-10">
       {/* Left section - Menu + Time */}
       <div className="flex items-center gap-6">
         {/* Menu button */}
         <button
           onClick={onMenuClick}
-          className="p-2.5 -ml-2 rounded-full text-white/70 hover:bg-white hover:text-black transition-all"
+          className="p-2.5 -ml-2 rounded-full text-[var(--color-text-secondary)] hover:bg-[var(--color-accent-primary)] hover:text-[var(--color-text-inverse)] transition-all active:scale-[0.98]"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
@@ -41,9 +41,9 @@ export function Header({ onMenuClick, currentTime, children }: HeaderProps) {
 
         {/* Time display - Open.com style */}
         {currentTime && (
-          <span className="text-[11px] text-[#555555] tracking-wider uppercase tabular-nums">
+          <span className="text-[11px] text-[var(--color-text-muted)] tracking-wider uppercase tabular-nums">
             {formatTime(currentTime)}{" "}
-            <span className="text-[#444444]">GST</span>
+            <span className="text-[var(--color-text-soft)]">GST</span>
           </span>
         )}
       </div>
@@ -64,7 +64,7 @@ export function Header({ onMenuClick, currentTime, children }: HeaderProps) {
 
       {/* Optional children (e.g., DateSelector) */}
       {children && (
-        <div className="pt-6 pb-6 px-6 lg:px-10">
+        <div className="pt-6 pb-6 px-6 lg:px-10 border-b border-[var(--color-border-subtle)]">
           {children}
         </div>
       )}

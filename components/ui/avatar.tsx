@@ -26,9 +26,8 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
       <div
         ref={ref}
         className={cn(
-          // Base styles - Dark theme with warm accent
           "relative inline-flex items-center justify-center rounded-full overflow-hidden",
-          "bg-[#E07A3C] text-white font-medium",
+          "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)] font-medium",
           "shrink-0",
 
           // Size

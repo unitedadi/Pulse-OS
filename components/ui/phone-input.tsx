@@ -81,15 +81,15 @@ export function PhoneInput({
   return (
     <div className={cn("w-full", className)}>
       {label && (
-        <label className="block text-xs text-[#666666] uppercase tracking-wider mb-2">
+        <label className="block text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
           {label}
-          {required && <span className="text-[#F87171] ml-1">*</span>}
+          {required && <span className="text-[var(--color-error)] ml-1">*</span>}
         </label>
       )}
       <div
         className={cn(
-          "flex items-center rounded-xl bg-[#111111] border transition-colors",
-          error ? "border-[#F87171]" : "border-[#1F1F1F] focus-within:border-[#2A2A2A]",
+          "flex items-center rounded-[var(--radius-md)] bg-[var(--color-bg-card)] border shadow-[var(--shadow-xs)] transition-colors",
+          error ? "border-[var(--color-error)]" : "border-[var(--color-border-default)] focus-within:border-[var(--color-border-focus)]",
           disabled && "opacity-50 cursor-not-allowed"
         )}
       >
@@ -100,35 +100,35 @@ export function PhoneInput({
             onClick={() => !disabled && setIsOpen(!isOpen)}
             disabled={disabled}
             className={cn(
-              "flex items-center gap-2 px-4 py-3.5 border-r border-[#1F1F1F]",
-              "text-white hover:bg-[#1A1A1A] transition-colors rounded-l-xl",
+              "flex items-center gap-2 px-4 py-3.5 border-r border-[var(--color-border-subtle)]",
+              "text-[var(--color-text-primary)] transition-colors rounded-l-[var(--radius-md)]",
               disabled && "cursor-not-allowed"
             )}
           >
             <span className="text-lg">{selectedCountry.flag}</span>
-            <span className="text-sm text-[#A0A0A0]">{selectedCountry.dial}</span>
+            <span className="text-sm text-[var(--color-text-secondary)]">{selectedCountry.dial}</span>
             <ChevronDown className={cn(
-              "h-4 w-4 text-[#666666] transition-transform",
+              "h-4 w-4 text-[var(--color-text-muted)] transition-transform",
               isOpen && "rotate-180"
             )} />
           </button>
 
           {/* Dropdown */}
           {isOpen && (
-            <div className="absolute top-full left-0 mt-2 w-56 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl shadow-xl z-50 py-2 max-h-64 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 w-56 bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] z-50 py-2 max-h-64 overflow-y-auto">
               {countryCodes.map((country) => (
                 <button
                   key={country.code}
                   onClick={() => handleCountrySelect(country)}
                   className={cn(
                     "w-full flex items-center gap-3 px-4 py-2.5 text-left",
-                    "hover:bg-[#222222] transition-colors",
-                    selectedCountry.code === country.code && "bg-[#222222]"
+                    "hover:bg-[var(--color-bg-secondary)] transition-colors",
+                    selectedCountry.code === country.code && "bg-[var(--color-bg-secondary)]"
                   )}
                 >
                   <span className="text-lg">{country.flag}</span>
-                  <span className="text-white text-sm flex-1">{country.name}</span>
-                  <span className="text-[#666666] text-sm">{country.dial}</span>
+                  <span className="text-[var(--color-text-primary)] text-sm flex-1">{country.name}</span>
+                  <span className="text-[var(--color-text-muted)] text-sm">{country.dial}</span>
                 </button>
               ))}
             </div>
@@ -143,8 +143,8 @@ export function PhoneInput({
           placeholder={placeholder}
           disabled={disabled}
           className={cn(
-            "flex-1 bg-transparent px-4 py-3.5 text-white placeholder-[#666666]",
-            "focus:outline-none text-base font-light",
+            "flex-1 bg-transparent px-4 py-3.5 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]",
+            "focus:outline-none text-base font-normal",
             disabled && "cursor-not-allowed"
           )}
         />
@@ -152,7 +152,7 @@ export function PhoneInput({
 
       {/* Error message */}
       {error && (
-        <p className="mt-2 text-sm text-[#F87171]">{error}</p>
+        <p className="mt-2 text-sm text-[var(--color-error)]">{error}</p>
       )}
     </div>
   );

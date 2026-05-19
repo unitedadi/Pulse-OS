@@ -1,213 +1,283 @@
 "use client";
 
 import * as React from "react";
-import {
-  DateSelector,
-  HeroBookingCard,
-  BookingCard,
-} from "@/components/ui";
-import { useLayoutContext } from "@/components/layouts/layout-context";
+import { ArrowUpRight, MapPin, RefreshCw, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { EmptyState, HeroBookingCard, StatusBadge } from "@/components/ui";
+import { usePartnerContext } from "@/components/layouts";
+import {
+  bookingCustomerName,
+  bookingTitle,
+  bookingAddressLabel,
+  fetchCustomerBookings,
+  formatMoneyFromFils,
+  formatDateLabel,
+  formatShortDate,
+  parseDate,
+  parseBookingDate,
+  type CustomerBooking,
+  toBookingStatus,
+  verticalLabel,
+} from "@/lib/api/bookings";
+
+interface BookingListRowProps {
+  booking: CustomerBooking;
+  date: Date;
+  onClick: () => void;
+}
+
+function paymentCapsule(booking: CustomerBooking) {
+  const isPaid =
+    String(booking.order_status ?? "").toUpperCase() === "PAID" ||
+    Boolean(booking.amount_captured_aed_fils);
+
+  if (isPaid) {
+    return {
+      label: "Paid",
+      className: "bg-[var(--color-success-light)] text-[var(--color-success)]",
+    };
+  }
+
+  return {
+    label: "Pending",
+    className: "bg-[var(--color-warning-light)] text-[var(--color-warning)]",
+  };
+}
+
+function formatStartTime(value?: string | null) {
+  const date = parseDate(value);
+  if (!date) return "Time pending";
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Asia/Dubai",
+  }).format(date);
+}
+
+function BookingListRow({ booking, date, onClick }: BookingListRowProps) {
+  const customer = bookingCustomerName(booking);
+  const payment = paymentCapsule(booking);
+  const initials = customer
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group w-full grid grid-cols-1 gap-4 py-5 text-left transition-colors sm:grid-cols-[132px_minmax(0,1fr)_auto] sm:items-center sm:gap-6"
+    >
+      <div className="sm:border-r sm:border-[var(--color-border-subtle)] sm:pr-6">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-soft)]">
+          {formatShortDate(date)}
+        </p>
+        <p className="mt-1 text-sm leading-5 text-[var(--color-text-primary)] tabular-nums">
+          {formatStartTime(booking.start_at)}
+        </p>
+      </div>
+
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[15px] leading-6 text-[var(--color-text-primary)] product-cell-title">
+            {bookingTitle(booking)}
+          </p>
+          <span className={`rounded-full px-2.5 py-1 text-[11px] leading-none ${payment.className}`}>
+            {payment.label}
+          </span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
+          <span className="inline-flex items-center gap-1.5">
+            <UserRound className="h-3.5 w-3.5" />
+            {customer}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5" />
+            {bookingAddressLabel(booking.address)}
+          </span>
+          <span className="font-mono text-[11px] text-[var(--color-text-soft)]">
+            {booking.order_id}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-4 sm:justify-end">
+        <div className="text-left sm:text-right">
+          <p className="text-sm text-[var(--color-text-primary)] tabular-nums">
+            {formatMoneyFromFils(
+              booking.amount_captured_aed_fils ?? booking.amount_expected_aed_fils,
+              booking.currency_captured ?? booking.currency_expected
+            )}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2 sm:justify-end">
+            <span className="rounded-full bg-[var(--color-bg-tertiary)] px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-secondary)]">
+              {verticalLabel(booking.vertical)}
+            </span>
+            <StatusBadge
+              status={toBookingStatus(booking.booking_status ?? booking.order_status)}
+              size="sm"
+            />
+          </div>
+        </div>
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-bg-tertiary)] text-[11px] text-[var(--color-text-secondary)]">
+          {initials || "DD"}
+        </span>
+        <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-default)] text-[var(--color-text-muted)] transition-colors group-hover:border-[var(--color-accent-primary)] group-hover:text-[var(--color-accent-primary)]">
+          <ArrowUpRight className="h-4 w-4" />
+        </span>
+      </div>
+    </button>
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { setHeaderContent } = useLayoutContext();
-  const dateRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());
+  const { context, loading: contextLoading, error: contextError } = usePartnerContext();
 
-  // Selected date state
-  const [selectedDate, setSelectedDate] = React.useState(new Date());
+  const [bookings, setBookings] = React.useState<CustomerBooking[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  // Handle date selection with scroll to that date's section
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-    const dateKey = date.toDateString();
-    const element = dateRefs.current.get(dateKey);
-    if (element) {
-      setTimeout(() => {
-        element.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-    }
-  };
+  const loadBookings = React.useCallback(async () => {
+    if (!context?.customer_id) return;
 
-  // Inject DateSelector into the sticky header
-  React.useEffect(() => {
-    setHeaderContent(
-      <DateSelector
-        selectedDate={selectedDate}
-        onDateSelect={handleDateSelect}
-      />
-    );
-    return () => setHeaderContent(null);
-  }, [selectedDate, setHeaderContent]);
-
-  // Generate date from days offset
-  const generateDate = (daysFromToday: number) => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() + daysFromToday);
-    return date;
-  };
-
-  // Format date for section headers
-  const formatDateHeader = (date: Date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return "Today";
-    } else if (date.toDateString() === tomorrow.toDateString()) {
-      return "Tomorrow";
-    } else {
-      return date.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
+    setLoading(true);
+    setError(null);
+    try {
+      const items = await fetchCustomerBookings({
+        customerId: context.customer_id,
       });
+      setBookings(items);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error ? loadError.message : "bookings_load_failed"
+      );
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [context?.customer_id]);
 
-  // Mock bookings database with dates
-  const allBookings = [
-    // Today - 8 bookings
-    { id: "1", service: "IV Therapy", customer: "Sarah Chen", time: "8:00 - 9:00 AM", daysFromToday: 0 },
-    { id: "2", service: "Vitamin Infusion", customer: "Mohammed Al-Hassan", time: "9:30 - 10:30 AM", daysFromToday: 0 },
-    { id: "3", service: "Blood Test", customer: "Emma Wilson", time: "11:00 - 11:30 AM", daysFromToday: 0 },
-    { id: "4", service: "NAD+ Therapy", customer: "James Rodriguez", time: "12:00 - 1:00 PM", daysFromToday: 0 },
-    { id: "5", service: "Hydration Boost", customer: "Aisha Patel", time: "2:00 - 3:00 PM", daysFromToday: 0 },
-    { id: "6", service: "Glutathione IV", customer: "David Kim", time: "3:30 - 4:30 PM", daysFromToday: 0 },
-    { id: "7", service: "Immunity Drip", customer: "Fatima Hassan", time: "5:00 - 6:00 PM", daysFromToday: 0 },
-    { id: "8", service: "Energy Boost", customer: "Michael Brown", time: "6:30 - 7:30 PM", daysFromToday: 0 },
+  React.useEffect(() => {
+    if (contextLoading) return;
+    if (!context?.customer_id) {
+      setLoading(false);
+      setError(contextError ?? "partner_context_missing");
+      return;
+    }
+    void loadBookings();
+  }, [context?.customer_id, contextError, contextLoading, loadBookings]);
 
-    // Tomorrow - 5 bookings
-    { id: "9", service: "Detox Infusion", customer: "Lisa Wang", time: "9:00 - 10:00 AM", daysFromToday: 1 },
-    { id: "10", service: "Anti-Aging IV", customer: "Omar Sheikh", time: "10:30 - 11:30 AM", daysFromToday: 1 },
-    { id: "11", service: "Migraine Relief", customer: "Sophie Martin", time: "1:00 - 1:30 PM", daysFromToday: 1 },
-    { id: "12", service: "Athletic Recovery", customer: "Ahmed Khalid", time: "3:00 - 4:00 PM", daysFromToday: 1 },
-    { id: "13", service: "IV Therapy", customer: "Priya Sharma", time: "5:00 - 6:00 PM", daysFromToday: 1 },
-
-    // Day +2 - 3 bookings
-    { id: "14", service: "Vitamin Infusion", customer: "John Smith", time: "10:00 - 11:00 AM", daysFromToday: 2 },
-    { id: "15", service: "Blood Test", customer: "Maria Garcia", time: "2:00 - 2:30 PM", daysFromToday: 2 },
-    { id: "16", service: "Hydration Boost", customer: "Wei Zhang", time: "4:00 - 5:00 PM", daysFromToday: 2 },
-
-    // Day +3 - 6 bookings
-    { id: "17", service: "NAD+ Therapy", customer: "Anna Petrova", time: "8:00 - 9:00 AM", daysFromToday: 3 },
-    { id: "18", service: "Glutathione IV", customer: "Carlos Mendez", time: "9:30 - 10:30 AM", daysFromToday: 3 },
-    { id: "19", service: "Immunity Drip", customer: "Yuki Tanaka", time: "11:00 AM - 12:00 PM", daysFromToday: 3 },
-    { id: "20", service: "Energy Boost", customer: "Hassan Ali", time: "1:00 - 2:00 PM", daysFromToday: 3 },
-    { id: "21", service: "Detox Infusion", customer: "Rachel Green", time: "3:30 - 4:30 PM", daysFromToday: 3 },
-    { id: "22", service: "Anti-Aging IV", customer: "Ibrahim Osman", time: "5:00 - 6:00 PM", daysFromToday: 3 },
-
-    // Day +4 - 2 bookings
-    { id: "23", service: "Athletic Recovery", customer: "Nina Volkov", time: "10:00 - 11:00 AM", daysFromToday: 4 },
-    { id: "24", service: "IV Therapy", customer: "Tom Wilson", time: "3:00 - 4:00 PM", daysFromToday: 4 },
-
-    // Day +5 - 4 bookings
-    { id: "25", service: "Migraine Relief", customer: "Leila Ahmadi", time: "9:00 - 9:30 AM", daysFromToday: 5 },
-    { id: "26", service: "Vitamin Infusion", customer: "Ben Taylor", time: "11:00 AM - 12:00 PM", daysFromToday: 5 },
-    { id: "27", service: "Blood Test", customer: "Samira Khan", time: "2:00 - 2:30 PM", daysFromToday: 5 },
-    { id: "28", service: "Hydration Boost", customer: "Alex Johnson", time: "4:30 - 5:30 PM", daysFromToday: 5 },
-
-    // Day +6 - 7 bookings
-    { id: "29", service: "NAD+ Therapy", customer: "Elena Kozlov", time: "8:30 - 9:30 AM", daysFromToday: 6 },
-    { id: "30", service: "Glutathione IV", customer: "Mark Davis", time: "10:00 - 11:00 AM", daysFromToday: 6 },
-    { id: "31", service: "Immunity Drip", customer: "Noor Al-Rashid", time: "11:30 AM - 12:30 PM", daysFromToday: 6 },
-    { id: "32", service: "Energy Boost", customer: "Julia Chen", time: "1:00 - 2:00 PM", daysFromToday: 6 },
-    { id: "33", service: "Detox Infusion", customer: "Ryan Murphy", time: "3:00 - 4:00 PM", daysFromToday: 6 },
-    { id: "34", service: "Anti-Aging IV", customer: "Amina Yusuf", time: "5:00 - 6:00 PM", daysFromToday: 6 },
-    { id: "35", service: "Athletic Recovery", customer: "Chris Lee", time: "7:00 - 8:00 PM", daysFromToday: 6 },
-
-    // Day +8 - 9 bookings
-    { id: "36", service: "IV Therapy", customer: "Diana Ross", time: "8:00 - 9:00 AM", daysFromToday: 8 },
-    { id: "37", service: "Vitamin Infusion", customer: "Tariq Hassan", time: "9:30 - 10:30 AM", daysFromToday: 8 },
-    { id: "38", service: "Blood Test", customer: "Emily Clark", time: "11:00 - 11:30 AM", daysFromToday: 8 },
-    { id: "39", service: "NAD+ Therapy", customer: "Raj Patel", time: "12:00 - 1:00 PM", daysFromToday: 8 },
-    { id: "40", service: "Hydration Boost", customer: "Megan Fox", time: "2:00 - 3:00 PM", daysFromToday: 8 },
-    { id: "41", service: "Glutathione IV", customer: "Omar Farooq", time: "3:30 - 4:30 PM", daysFromToday: 8 },
-    { id: "42", service: "Immunity Drip", customer: "Sara Anderson", time: "5:00 - 6:00 PM", daysFromToday: 8 },
-    { id: "43", service: "Energy Boost", customer: "Khalid Mansour", time: "6:30 - 7:30 PM", daysFromToday: 8 },
-    { id: "44", service: "Detox Infusion", customer: "Amy Wong", time: "8:00 - 9:00 PM", daysFromToday: 8 },
-
-    // Day +9 - 5 bookings
-    { id: "45", service: "Anti-Aging IV", customer: "Lucy Chen", time: "9:00 - 10:00 AM", daysFromToday: 9 },
-    { id: "46", service: "Athletic Recovery", customer: "Mohammed Saleh", time: "11:00 AM - 12:00 PM", daysFromToday: 9 },
-    { id: "47", service: "IV Therapy", customer: "Sophie Anderson", time: "2:00 - 3:00 PM", daysFromToday: 9 },
-    { id: "48", service: "Migraine Relief", customer: "David Park", time: "4:00 - 4:30 PM", daysFromToday: 9 },
-    { id: "49", service: "Vitamin Infusion", customer: "Aisha Mahmoud", time: "6:00 - 7:00 PM", daysFromToday: 9 },
-
-    // Day +10 - 3 bookings
-    { id: "50", service: "Blood Test", customer: "James Wilson", time: "10:00 - 10:30 AM", daysFromToday: 10 },
-    { id: "51", service: "Hydration Boost", customer: "Fatima Al-Said", time: "1:00 - 2:00 PM", daysFromToday: 10 },
-    { id: "52", service: "NAD+ Therapy", customer: "Kevin Brown", time: "4:00 - 5:00 PM", daysFromToday: 10 },
-  ];
-
-  // Group bookings by date
   const bookingsByDate = React.useMemo(() => {
-    const grouped = new Map<string, typeof allBookings>();
+    const grouped = new Map<string, { date: Date; bookings: CustomerBooking[] }>();
 
-    allBookings.forEach((booking) => {
-      const date = generateDate(booking.daysFromToday);
-      const dateKey = date.toDateString();
+    bookings.forEach((booking) => {
+      const date = parseBookingDate(booking);
+      if (!date) return;
+      const day = new Date(date);
+      day.setHours(0, 0, 0, 0);
+      const key = day.toDateString();
 
-      if (!grouped.has(dateKey)) {
-        grouped.set(dateKey, []);
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.bookings.push(booking);
+      } else {
+        grouped.set(key, { date: day, bookings: [booking] });
       }
-      grouped.get(dateKey)!.push(booking);
     });
 
-    // Sort by date
-    return Array.from(grouped.entries())
-      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-      .map(([dateString, bookings]) => ({
-        date: new Date(dateString),
-        dateString,
-        bookings,
-      }));
-  }, []);
+    return Array.from(grouped.values()).sort(
+      (left, right) => left.date.getTime() - right.date.getTime()
+    );
+  }, [bookings]);
 
   return (
-    <div className="space-y-10">
-      {/* Hero CTA Card - Full width */}
+    <div className="space-y-12 pt-4">
       <HeroBookingCard
         title="Create a booking"
-        subtitle="Schedule wellness services in seconds"
+        subtitle="Schedule wellness services in seconds."
         imageUrl="/services/create-booking.avif"
         onClick={() => router.push("/bookings/new")}
       />
 
-      {/* All Bookings - Infinite Scroll by Date */}
-      <div className="space-y-12">
-        {bookingsByDate.map(({ date, dateString, bookings }) => (
-          <div
-            key={dateString}
-            ref={(el) => {
-              if (el) dateRefs.current.set(dateString, el);
-            }}
-            className="space-y-6 scroll-mt-52"
-          >
-            <h2 className="font-extrabold text-white" style={{ fontSize: '48px' }}>
-              {formatDateHeader(date)}
-            </h2>
+      {loading ? (
+        <div className="py-16 text-center text-sm text-[var(--color-text-muted)]">
+          Loading bookings...
+        </div>
+      ) : error ? (
+        <EmptyState
+          title="Couldn't load bookings"
+          description={`Refresh and try again. ${error}`}
+          action={{
+            label: "Refresh",
+            onClick: () => void loadBookings(),
+          }}
+        />
+      ) : bookingsByDate.length === 0 ? (
+        <EmptyState
+          title="No bookings yet"
+          description="Bookings created for this Pulse customer profile will appear here."
+          action={{
+            label: "Create booking",
+            onClick: () => router.push("/bookings/new"),
+          }}
+        />
+      ) : (
+        <div className="space-y-12">
+          {bookingsByDate.map(({ date, bookings: dateBookings }) => (
+            <div
+              key={date.toDateString()}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 lg:gap-12 items-end border-t border-[var(--color-border-subtle)] pt-10">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-[var(--color-text-soft)] mb-3">
+                    Schedule
+                  </p>
+                  <h2 className="text-4xl lg:text-5xl font-normal text-[var(--color-text-primary)] leading-none">
+                    {formatDateLabel(date)}
+                  </h2>
+                </div>
+                <p className="text-[var(--color-text-muted)] max-w-xl">
+                  {dateBookings.length} booking
+                  {dateBookings.length === 1 ? "" : "s"} ready for handoff,
+                  payment, and clinical coordination.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {bookings.map((booking) => (
-                <BookingCard
-                  key={booking.id}
-                  service={booking.service}
-                  customer={booking.customer}
-                  date={date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-                  time={booking.time}
-                  status="upcoming"
-                  imageUrl="/services/skin-therapy.png"
-                  onClick={() => router.push(`/bookings/${booking.id}`)}
-                />
-              ))}
+              <div className="divide-y divide-[var(--color-border-subtle)]">
+                {dateBookings.map((booking) => (
+                  <BookingListRow
+                    key={booking.order_id}
+                    booking={booking}
+                    date={parseBookingDate(booking) ?? date}
+                    onClick={() =>
+                      router.push(
+                        `/bookings/${encodeURIComponent(booking.order_id)}?vertical=${encodeURIComponent(
+                          booking.vertical ?? ""
+                        )}`
+                      )
+                    }
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && !error && bookings.length > 0 && (
+        <button
+          type="button"
+          onClick={() => void loadBookings()}
+          className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-subtle)] px-4 py-2 text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-primary)]"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh bookings
+        </button>
+      )}
     </div>
   );
 }

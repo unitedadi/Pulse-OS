@@ -38,24 +38,24 @@ export function ToastItem({
 
   const styles: Record<ToastVariant, { bg: string; border: string; icon: string }> = {
     success: {
-      bg: "bg-[#111111]",
-      border: "border-[#4ADE80]/30",
-      icon: "text-[#4ADE80]",
+      bg: "bg-[var(--color-bg-card)]",
+      border: "border-[var(--color-success)]/30",
+      icon: "text-[var(--color-success)]",
     },
     error: {
-      bg: "bg-[#111111]",
-      border: "border-[#F87171]/30",
-      icon: "text-[#F87171]",
+      bg: "bg-[var(--color-bg-card)]",
+      border: "border-[var(--color-error)]/30",
+      icon: "text-[var(--color-error)]",
     },
     warning: {
-      bg: "bg-[#111111]",
-      border: "border-[#FBBF24]/30",
-      icon: "text-[#FBBF24]",
+      bg: "bg-[var(--color-bg-card)]",
+      border: "border-[var(--color-warning)]/30",
+      icon: "text-[var(--color-warning)]",
     },
     info: {
-      bg: "bg-[#111111]",
-      border: "border-[#3B82F6]/30",
-      icon: "text-[#3B82F6]",
+      bg: "bg-[var(--color-bg-card)]",
+      border: "border-[var(--color-info)]/30",
+      icon: "text-[var(--color-info)]",
     },
   };
 
@@ -64,7 +64,7 @@ export function ToastItem({
   return (
     <div
       className={cn(
-        "flex items-start gap-3 p-4 rounded-xl border shadow-lg",
+        "flex items-start gap-3 p-4 rounded-[var(--radius-md)] border shadow-[var(--shadow-lg)]",
         "animate-in slide-in-from-right-full fade-in duration-300",
         style.bg,
         style.border
@@ -76,9 +76,9 @@ export function ToastItem({
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-white font-light">{title}</p>
+        <p className="text-[var(--color-text-primary)] font-medium">{title}</p>
         {description && (
-          <p className="text-sm text-[#666666] mt-0.5">{description}</p>
+          <p className="text-sm text-[var(--color-text-muted)] mt-0.5">{description}</p>
         )}
         {action && (
           <button
@@ -86,7 +86,7 @@ export function ToastItem({
               action.onClick();
               onDismiss(id);
             }}
-            className="text-sm text-[#E07A3C] hover:text-[#F5A66A] mt-2 font-medium transition-colors"
+            className="text-sm text-[var(--color-accent-primary)] hover:text-[var(--color-accent-secondary)] mt-2 font-medium transition-colors"
           >
             {action.label}
           </button>
@@ -95,7 +95,7 @@ export function ToastItem({
 
       <button
         onClick={() => onDismiss(id)}
-        className="shrink-0 p-1 rounded-lg text-[#666666] hover:text-white hover:bg-[#1A1A1A] transition-colors"
+        className="shrink-0 p-1 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] transition-colors"
       >
         <X className="h-4 w-4" />
       </button>

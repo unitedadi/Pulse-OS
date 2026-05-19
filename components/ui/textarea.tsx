@@ -36,9 +36,9 @@ export function Textarea({
   return (
     <div>
       {label && (
-        <label className="block text-xs text-[#666666] uppercase tracking-wider mb-2">
+        <label className="block text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
           {label}
-          {required && <span className="text-[#F87171] ml-1">*</span>}
+          {required && <span className="text-[var(--color-error)] ml-1">*</span>}
         </label>
       )}
 
@@ -50,11 +50,11 @@ export function Textarea({
         rows={rows}
         maxLength={maxLength}
         className={cn(
-          "w-full px-4 py-3 bg-[#0A0A0A] border rounded-xl text-white font-light placeholder:text-[#666666] transition-colors",
-          "focus:outline-none focus:ring-1 focus:ring-[#E07A3C]/20",
+          "w-full px-4 py-3 bg-[var(--color-bg-card)] border rounded-[var(--radius-md)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors shadow-[var(--shadow-xs)]",
+          "focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)]/20",
           error
-            ? "border-[#F87171] focus:border-[#F87171]"
-            : "border-[#1F1F1F] focus:border-[#E07A3C] hover:border-[#2A2A2A]",
+            ? "border-[var(--color-error)] focus:border-[var(--color-error)]"
+            : "border-[var(--color-border-default)] focus:border-[var(--color-accent-primary)] hover:border-[var(--color-border-hover)]",
           disabled && "opacity-50 cursor-not-allowed",
           resize === "none" && "resize-none",
           resize === "vertical" && "resize-y",
@@ -65,16 +65,16 @@ export function Textarea({
 
       <div className="flex items-center justify-between mt-1.5">
         <div>
-          {error && <p className="text-sm text-[#F87171]">{error}</p>}
-          {hint && !error && <p className="text-xs text-[#666666]">{hint}</p>}
+          {error && <p className="text-sm text-[var(--color-error)]">{error}</p>}
+          {hint && !error && <p className="text-xs text-[var(--color-text-muted)]">{hint}</p>}
         </div>
         {showCharCount && (
           <p
             className={cn(
               "text-xs",
               maxLength && charCount >= maxLength * 0.9
-                ? "text-[#FBBF24]"
-                : "text-[#666666]"
+                ? "text-[var(--color-warning)]"
+                : "text-[var(--color-text-muted)]"
             )}
           >
             {charCount}/{maxLength}

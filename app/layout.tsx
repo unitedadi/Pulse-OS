@@ -1,16 +1,8 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
 import { MobileGate } from "@/components/mobile-gate";
 import "./globals.css";
-
-// Outfit - modern, friendly, distinctive (Hims/Ro aesthetic)
-const font = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
-});
 
 export const metadata: Metadata = {
   title: "Pulse OS | DarDoc Partner Portal",
@@ -25,7 +17,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={`${font.variable} antialiased`}>
+        <body className="font-sans antialiased">
           <Providers>
             <MobileGate>{children}</MobileGate>
           </Providers>

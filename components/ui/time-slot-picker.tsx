@@ -37,15 +37,16 @@ function categorizeSlots(slots: TimeSlot[]) {
   return { morning, afternoon, evening };
 }
 
-export function TimeSlotPicker({
-  slots,
+function TimeSlotButton({
+  slot,
   selectedSlotId,
   onSelect,
-  className,
-}: TimeSlotPickerProps) {
-  const { morning, afternoon, evening } = categorizeSlots(slots);
-
-  const TimeSlotButton = ({ slot }: { slot: TimeSlot }) => (
+}: {
+  slot: TimeSlot;
+  selectedSlotId?: string;
+  onSelect?: (slot: TimeSlot) => void;
+}) {
+  return (
     <button
       onClick={() => slot.available && onSelect?.(slot)}
       disabled={!slot.available}
@@ -61,32 +62,50 @@ export function TimeSlotPicker({
       {slot.time}
     </button>
   );
+}
 
-  const SlotGroup = ({
-    title,
-    icon,
-    slots,
-  }: {
-    title: string;
-    icon: React.ReactNode;
-    slots: TimeSlot[];
-  }) => {
-    if (slots.length === 0) return null;
+function SlotGroup({
+  title,
+  icon,
+  slots,
+  selectedSlotId,
+  onSelect,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  slots: TimeSlot[];
+  selectedSlotId?: string;
+  onSelect?: (slot: TimeSlot) => void;
+}) {
+  if (slots.length === 0) return null;
 
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-[#666666]">
-          {icon}
-          <span className="text-sm">{title}</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {slots.map((slot) => (
-            <TimeSlotButton key={slot.id} slot={slot} />
-          ))}
-        </div>
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-[#666666]">
+        {icon}
+        <span className="text-sm">{title}</span>
       </div>
-    );
-  };
+      <div className="flex flex-wrap gap-2">
+        {slots.map((slot) => (
+          <TimeSlotButton
+            key={slot.id}
+            slot={slot}
+            selectedSlotId={selectedSlotId}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function TimeSlotPicker({
+  slots,
+  selectedSlotId,
+  onSelect,
+  className,
+}: TimeSlotPickerProps) {
+  const { morning, afternoon, evening } = categorizeSlots(slots);
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -94,16 +113,22 @@ export function TimeSlotPicker({
         title="Morning"
         icon={<Sun className="h-4 w-4" />}
         slots={morning}
+        selectedSlotId={selectedSlotId}
+        onSelect={onSelect}
       />
       <SlotGroup
         title="Afternoon"
         icon={<Sunset className="h-4 w-4" />}
         slots={afternoon}
+        selectedSlotId={selectedSlotId}
+        onSelect={onSelect}
       />
       <SlotGroup
         title="Evening"
         icon={<Moon className="h-4 w-4" />}
         slots={evening}
+        selectedSlotId={selectedSlotId}
+        onSelect={onSelect}
       />
 
       {slots.length === 0 && (

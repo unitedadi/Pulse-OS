@@ -36,28 +36,22 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={isDisabled}
         className={cn(
-          // Base styles - Open aesthetic
-          "inline-flex items-center justify-center font-normal",
-          "transition-all duration-200 ease-out",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A3C]/50",
+          "inline-flex items-center justify-center font-medium",
+          "transition-all duration-200 ease-out active:scale-[0.98]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent-primary)]/20",
           "disabled:pointer-events-none disabled:opacity-40",
 
-          // Variants - Open style (outlined primary)
           {
-            // Primary - Outlined pill (Open signature)
-            "bg-transparent text-white border border-[#2A2A2A] rounded-full hover:border-white hover:bg-white hover:text-black":
+            "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)] border border-transparent rounded-full hover:bg-[var(--color-accent-secondary)] shadow-[var(--shadow-sm)]":
               variant === "primary",
 
-            // Accent - Warm orange fill for key CTAs
-            "bg-[#E07A3C] text-white rounded-full hover:bg-[#C96A32] border-0":
+            "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] rounded-full hover:bg-[var(--color-accent-light)] border border-[var(--color-border-subtle)]":
               variant === "accent",
 
-            // Ghost - Minimal
-            "bg-transparent text-[#A0A0A0] rounded-full hover:text-white hover:bg-white/5":
+            "bg-transparent text-[var(--color-text-secondary)] rounded-full hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]":
               variant === "ghost",
 
-            // Destructive - Outlined red
-            "bg-transparent text-[#F87171] border border-[#F87171]/30 rounded-full hover:border-[#F87171]/60 hover:bg-[#F87171]/5":
+            "bg-transparent text-[var(--color-error)] border border-[var(--color-error)]/30 rounded-full hover:border-[var(--color-error)]/60 hover:bg-[var(--color-error-light)]":
               variant === "destructive",
           },
 

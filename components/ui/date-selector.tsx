@@ -80,7 +80,7 @@ export function DateSelector({
           <button
             type="button"
             onClick={scrollLeft}
-            className="w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 text-white/70 hover:text-black hover:bg-white cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200 text-[var(--color-text-secondary)] hover:text-[var(--color-text-inverse)] hover:bg-[var(--color-accent-primary)] cursor-pointer active:scale-[0.98]"
             aria-label="Previous week"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -99,7 +99,7 @@ export function DateSelector({
               type="button"
               key={date.toISOString()}
               onClick={() => onDateSelect(date)}
-              className="w-16 flex flex-col items-center justify-center py-3 transition-all duration-200"
+              className="w-16 flex flex-col items-center justify-center py-3 transition-all duration-200 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-secondary)] active:scale-[0.98]"
             >
               <div className="flex flex-col items-center justify-center pb-2">
                 {/* Weekday letter */}
@@ -107,10 +107,10 @@ export function DateSelector({
                   className={cn(
                     "text-xs font-normal tracking-wide transition-colors duration-200",
                     selected
-                      ? "text-white"
+                      ? "text-[var(--color-accent-primary)]"
                       : today
-                        ? "text-[#E07A3C]"
-                        : "text-[#555555]"
+                        ? "text-[var(--color-text-primary)]"
+                        : "text-[var(--color-text-muted)]"
                   )}
                 >
                   {formatDayAbbrev(date)}
@@ -121,10 +121,10 @@ export function DateSelector({
                   className={cn(
                     "text-xl font-light mt-0.5 transition-colors duration-200 tabular-nums",
                     selected
-                      ? "text-white"
+                      ? "text-[var(--color-accent-primary)]"
                       : today
-                        ? "text-[#E07A3C]"
-                        : "text-[#888888] hover:text-white"
+                        ? "text-[var(--color-text-primary)]"
+                        : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
                   )}
                 >
                   {formatDayNum(date)}
@@ -135,7 +135,7 @@ export function DateSelector({
               <div
                 className={cn(
                   "h-0.5 w-5 rounded-full transition-all duration-200",
-                  selected ? "bg-white" : "bg-transparent"
+                  selected ? "bg-[var(--color-accent-primary)]" : "bg-transparent"
                 )}
               />
             </button>
@@ -151,8 +151,8 @@ export function DateSelector({
         className={cn(
           "w-8 h-8 flex items-center justify-center rounded-full transition-all duration-200",
           canScrollRight
-            ? "text-white/70 hover:text-black hover:bg-white cursor-pointer"
-            : "text-[#333333] cursor-not-allowed"
+            ? "text-[var(--color-text-secondary)] hover:text-[var(--color-text-inverse)] hover:bg-[var(--color-accent-primary)] cursor-pointer active:scale-[0.98]"
+            : "text-[var(--color-text-soft)] cursor-not-allowed"
         )}
         aria-label="Next week"
       >

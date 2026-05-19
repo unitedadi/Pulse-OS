@@ -11,6 +11,8 @@ interface AppLayoutProps {
   partner?: {
     name: string;
     logo?: string;
+    sellerId?: string;
+    customerId?: string;
   };
   userRole?: string;
 }
@@ -34,7 +36,7 @@ function AppLayoutInner({ children, partner, userRole }: AppLayoutProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
+    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
       {/* Header - Hidden in immersive mode */}
       {!isImmersive && (
         <Header
@@ -57,7 +59,7 @@ function AppLayoutInner({ children, partner, userRole }: AppLayoutProps) {
       {/* Main Content Area - No padding in immersive mode */}
       <main
         className={cn(
-          !isImmersive && "px-6 lg:px-10 pb-10"
+          !isImmersive && "px-6 lg:px-10 pb-14"
         )}
       >
         {children}

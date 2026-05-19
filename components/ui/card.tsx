@@ -15,25 +15,22 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          // Base styles - Dark theme
-          "bg-[#141414] rounded-2xl border border-[#2A2A2A]",
+          "bg-[var(--color-bg-card)] rounded-[var(--radius-xl)] border border-[var(--color-border-subtle)] shadow-[var(--shadow-card)]",
           "transition-all duration-200 ease-out",
 
           // Variants
           {
             // Default - dark card with subtle border
             "": variant === "default",
-            // Elevated - slightly lighter background
-            "bg-[#1A1A1A]": variant === "elevated",
-            // Accent - warm orange border glow
-            "border-[#E07A3C]/30": variant === "accent",
+            "bg-[var(--color-bg-secondary)]": variant === "elevated",
+            "bg-[var(--color-bg-accent)] text-[var(--color-text-inverse)] border-transparent": variant === "accent",
           },
 
           // Hover effect with glow
           hover && [
             "cursor-pointer",
-            "hover:border-[#3A3A3A]",
-            "hover:shadow-[0_0_30px_rgba(224,122,60,0.08)]",
+            "hover:border-[var(--color-border-hover)]",
+            "hover:shadow-[var(--shadow-card-hover)]",
           ],
 
           // Padding
@@ -73,7 +70,7 @@ const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTML
     <h3
       ref={ref}
       className={cn(
-        "text-xl font-normal text-white leading-tight tracking-tight",
+        "text-xl font-normal text-[var(--color-text-primary)] leading-tight tracking-normal",
         className
       )}
       {...props}
@@ -86,7 +83,7 @@ const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttribu
   ({ className, ...props }, ref) => (
     <p
       ref={ref}
-      className={cn("text-[#666666]", className)}
+      className={cn("text-[var(--color-text-muted)]", className)}
       {...props}
     />
   )

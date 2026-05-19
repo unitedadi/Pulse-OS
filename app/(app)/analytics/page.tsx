@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui";
+import { Button, EmptyState } from "@/components/ui";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,8 +13,16 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { usePartnerContext } from "@/components/layouts";
+import {
+  analyticsExportPath,
+  fetchPartnerAnalytics,
+  moneyFromFils,
+  numberFromFils,
+  type AnalyticsPeriod,
+  type PartnerAnalyticsResponse,
+} from "@/lib/api/partner-analytics";
 
-// Mock data
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -28,92 +36,30 @@ const PERIODS = [
   { id: "custom", label: "Custom", fullLabel: "Custom Range" },
 ] as const;
 
-type PeriodId = typeof PERIODS[number]["id"];
+function isoDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
-const MOCK_SUMMARY = {
-  totalBookings: 47,
-  grossRevenue: 42353,
-  commissionEarned: 10287,
-  estimatedPayout: 9912,
-  pendingPayments: 4500,
-  refunds: 1499,
-  clawbacks: 374,
-};
-
-const MOCK_TRANSACTIONS = [
-  {
-    id: "TXN-001",
-    date: new Date(2025, 0, 25),
-    customer: "Sarah Chen",
-    product: "IV Therapy",
-    gross: 450,
-    commission: 112,
-    status: "completed" as const,
-  },
-  {
-    id: "TXN-002",
-    date: new Date(2025, 0, 24),
-    customer: "Mohammed Al-Hassan",
-    product: "Vitamin Infusion",
-    gross: 350,
-    commission: 87,
-    status: "completed" as const,
-  },
-  {
-    id: "TXN-003",
-    date: new Date(2025, 0, 23),
-    customer: "Emma Wilson",
-    product: "Blood Test",
-    gross: 200,
-    commission: 50,
-    status: "completed" as const,
-  },
-  {
-    id: "TXN-004",
-    date: new Date(2025, 0, 22),
-    customer: "Ahmed Khalid",
-    product: "Health Checkup",
-    gross: 600,
-    commission: 150,
-    status: "completed" as const,
-  },
-  {
-    id: "TXN-005",
-    date: new Date(2025, 0, 21),
-    customer: "Lisa Park",
-    product: "IV Therapy",
-    gross: 450,
-    commission: 0,
-    status: "refunded" as const,
-  },
-  {
-    id: "TXN-006",
-    date: new Date(2025, 0, 20),
-    customer: "Omar Sheikh",
-    product: "NAD+ Therapy",
-    gross: 800,
-    commission: 200,
-    status: "completed" as const,
-  },
-  {
-    id: "TXN-007",
-    date: new Date(2025, 0, 19),
-    customer: "Priya Sharma",
-    product: "Hydration Boost",
-    gross: 300,
-    commission: 75,
-    status: "completed" as const,
-  },
-];
+function customRange(month: number, year: number) {
+  return {
+    startDate: isoDate(new Date(year, month, 1)),
+    endDate: isoDate(new Date(year, month + 1, 0)),
+  };
+}
 
 export default function AnalyticsPage() {
   const router = useRouter();
-  const [selectedPeriod, setSelectedPeriod] = React.useState<PeriodId>("mtd");
-  const [selectedMonth, setSelectedMonth] = React.useState(0);
-  const [selectedYear, setSelectedYear] = React.useState(2025);
-
-  const summary = MOCK_SUMMARY;
-  const transactions = MOCK_TRANSACTIONS;
+  const { context, loading: contextLoading, error: contextError } = usePartnerContext();
+  const now = React.useMemo(() => new Date(), []);
+  const [selectedPeriod, setSelectedPeriod] = React.useState<AnalyticsPeriod>("mtd");
+  const [selectedMonth, setSelectedMonth] = React.useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = React.useState(now.getFullYear());
+  const [analytics, setAnalytics] = React.useState<PartnerAnalyticsResponse | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const navigateMonth = (direction: "prev" | "next") => {
     if (direction === "prev") {
@@ -133,6 +79,43 @@ export default function AnalyticsPage() {
     }
   };
 
+  const requestParams = React.useMemo(() => {
+    if (!context?.seller_id) return null;
+    const range = customRange(selectedMonth, selectedYear);
+    return {
+      sellerId: context.seller_id,
+      period: selectedPeriod,
+      timezone: "Asia/Dubai",
+      startDate: range.startDate,
+      endDate: range.endDate,
+      limit: 25,
+    };
+  }, [context?.seller_id, selectedMonth, selectedPeriod, selectedYear]);
+
+  const loadAnalytics = React.useCallback(async () => {
+    if (!requestParams) return;
+    setLoading(true);
+    setError(null);
+    try {
+      setAnalytics(await fetchPartnerAnalytics(requestParams));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "analytics_load_failed");
+      setAnalytics(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [requestParams]);
+
+  React.useEffect(() => {
+    if (contextLoading) return;
+    if (!context?.seller_id) {
+      setLoading(false);
+      setError(contextError ?? "partner_context_missing");
+      return;
+    }
+    void loadAnalytics();
+  }, [context?.seller_id, contextError, contextLoading, loadAnalytics]);
+
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -149,30 +132,46 @@ export default function AnalyticsPage() {
     return period?.fullLabel || "";
   };
 
+  const handleExport = () => {
+    if (!requestParams) return;
+    window.open(`/api/backend${analyticsExportPath(requestParams)}`, "_blank", "noopener,noreferrer");
+  };
+
+  const summary = analytics?.summary;
+  const currency = analytics?.currency ?? "AED";
+  const transactions = analytics?.recent_transactions ?? [];
+
   return (
-    <div className="max-w-5xl mx-auto space-y-10 pt-6 relative">
+    <div className="max-w-6xl mx-auto space-y-10 pt-10 relative">
       {/* Close Button */}
       <button
         onClick={() => router.back()}
-        className="absolute top-6 right-0 h-10 w-10 rounded-full flex items-center justify-center text-[#666666] hover:bg-white hover:text-black transition-all"
+        className="absolute top-10 right-0 h-10 w-10 rounded-full flex items-center justify-center border border-[var(--color-border-default)] text-[var(--color-text-muted)] hover:border-[var(--color-accent-primary)] hover:text-[var(--color-accent-primary)] transition-colors"
       >
         <X className="h-5 w-5" />
       </button>
 
       {/* Header */}
-      <div className="flex items-center justify-start">
+      <div className="pr-14 space-y-6">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--color-text-soft)]">Analytics</p>
+          <p className="mt-2 text-2xl font-normal text-[var(--color-text-primary)]">
+            {getPeriodLabel()}
+          </p>
+        </div>
+
         {/* Period Filter Tabs */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center p-1 rounded-full border border-[#2A2A2A] bg-[#0A0A0A]">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1 rounded-full border border-[var(--color-border-default)] p-1">
             {PERIODS.map((period) => (
               <button
                 key={period.id}
                 onClick={() => setSelectedPeriod(period.id)}
                 className={cn(
-                  "px-4 py-2 rounded-full text-sm font-light transition-all",
+                  "px-4 py-2 rounded-full text-sm transition-all",
                   selectedPeriod === period.id
-                    ? "bg-white text-black"
-                    : "text-[#666666] hover:text-white"
+                    ? "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)]"
+                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
                 )}
               >
                 {period.label}
@@ -185,21 +184,21 @@ export default function AnalyticsPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigateMonth("prev")}
-                className="h-10 w-10 rounded-full flex items-center justify-center text-[#666666] hover:text-white hover:bg-white/5 transition-all"
+                className="h-10 w-10 rounded-full flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-accent-primary)] transition-colors"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
 
-              <div className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#2A2A2A]">
-                <Calendar className="h-4 w-4 text-[#555555]" />
-                <span className="text-white font-light">
+              <div className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[var(--color-border-default)]">
+                <Calendar className="h-4 w-4 text-[var(--color-text-muted)]" />
+                <span className="text-[var(--color-text-primary)]">
                   {MONTHS[selectedMonth]} {selectedYear}
                 </span>
               </div>
 
               <button
                 onClick={() => navigateMonth("next")}
-                className="h-10 w-10 rounded-full flex items-center justify-center text-[#666666] hover:text-white hover:bg-white/5 transition-all"
+                className="h-10 w-10 rounded-full flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-accent-primary)] transition-colors"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
@@ -209,158 +208,198 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Stats Row */}
-      <div className="flex items-center gap-16">
-        <div>
-          <p className="text-5xl font-extralight text-white tabular-nums">
-            {summary.totalBookings}
+      {loading ? (
+        <div className="py-20 text-center text-sm text-[var(--color-text-muted)]">
+          Loading analytics...
+        </div>
+      ) : error ? (
+        <EmptyState
+          title="Couldn't load analytics"
+          description={`Refresh and try again. ${error}`}
+          action={{
+            label: "Refresh",
+            onClick: () => void loadAnalytics(),
+          }}
+        />
+      ) : !summary ? (
+        <EmptyState
+          title="No analytics yet"
+          description="Analytics will appear after the first seller-scoped order is captured."
+        />
+      ) : (
+        <>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-6 border-y border-[var(--color-border-subtle)] py-8">
+        <div className="space-y-2">
+          <p className="text-4xl font-normal text-[var(--color-text-primary)] tabular-nums">
+            {summary.total_bookings}
           </p>
-          <p className="text-xs text-[#555555] uppercase tracking-wider mt-2">Bookings</p>
+          <p className="text-[11px] text-[var(--color-text-soft)] uppercase tracking-[0.18em]">Bookings</p>
         </div>
-        <div className="h-12 w-px bg-[#1F1F1F]" />
-        <div>
+        <div className="space-y-2 lg:border-l lg:border-[var(--color-border-subtle)] lg:pl-8">
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-extralight text-white tabular-nums">
-              {summary.grossRevenue.toLocaleString()}
+            <span className="text-4xl font-normal text-[var(--color-text-primary)] tabular-nums">
+              {numberFromFils(summary.gross_revenue_fils)}
             </span>
-            <span className="text-sm text-[#555555]">AED</span>
+            <span className="text-xs text-[var(--color-text-muted)]">{currency}</span>
           </div>
-          <p className="text-xs text-[#555555] uppercase tracking-wider mt-2">Gross Revenue</p>
+          <p className="text-[11px] text-[var(--color-text-soft)] uppercase tracking-[0.18em]">Gross Revenue</p>
         </div>
-        <div className="h-12 w-px bg-[#1F1F1F]" />
-        <div>
+        <div className="space-y-2 lg:border-l lg:border-[var(--color-border-subtle)] lg:pl-8">
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-extralight text-[#E07A3C] tabular-nums">
-              {summary.commissionEarned.toLocaleString()}
+            <span className="text-4xl font-normal text-[var(--color-accent-primary)] tabular-nums">
+              {numberFromFils(summary.commission_earned_fils)}
             </span>
-            <span className="text-sm text-[#555555]">AED</span>
+            <span className="text-xs text-[var(--color-text-muted)]">{currency}</span>
           </div>
-          <p className="text-xs text-[#555555] uppercase tracking-wider mt-2">Commission</p>
+          <p className="text-[11px] text-[var(--color-text-soft)] uppercase tracking-[0.18em]">Commission</p>
         </div>
-        <div className="h-12 w-px bg-[#1F1F1F]" />
-        <div>
+        <div className="space-y-2 lg:border-l lg:border-[var(--color-border-subtle)] lg:pl-8">
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-extralight text-white tabular-nums">
-              {summary.estimatedPayout.toLocaleString()}
+            <span className="text-4xl font-normal text-[var(--color-text-primary)] tabular-nums">
+              {numberFromFils(summary.estimated_payout_fils)}
             </span>
-            <span className="text-sm text-[#555555]">AED</span>
+            <span className="text-xs text-[var(--color-text-muted)]">{currency}</span>
           </div>
-          <p className="text-xs text-[#555555] uppercase tracking-wider mt-2">Est. Payout</p>
+          <p className="text-[11px] text-[var(--color-text-soft)] uppercase tracking-[0.18em]">Est. Payout</p>
         </div>
       </div>
-
-      {/* Divider */}
-      <div className="h-px bg-[#1F1F1F]" />
 
       {/* Breakdown Section */}
       <div>
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xs text-[#555555] uppercase tracking-wider">
+          <p className="text-[11px] text-[var(--color-text-soft)] uppercase tracking-[0.18em]">
             {selectedPeriod === "custom"
               ? `${MONTHS[selectedMonth]} Breakdown`
               : `${getPeriodLabel()} Breakdown`}
-          </h3>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#2A2A2A] text-[#555555] text-xs font-medium hover:bg-white hover:text-black hover:border-white transition-all">
+          </p>
+          <button
+            type="button"
+            onClick={handleExport}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--color-border-default)] text-[var(--color-text-muted)] text-xs font-medium hover:border-[var(--color-accent-primary)] hover:text-[var(--color-accent-primary)] transition-colors"
+          >
             <Download className="h-3 w-3" />
             Export
           </button>
         </div>
 
-        <div className="space-y-1">
-          <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-[#111111] transition-all">
-            <span className="text-[#A0A0A0] font-light">Gross Revenue</span>
-            <span className="text-white font-light tabular-nums">AED {summary.grossRevenue.toLocaleString()}</span>
+        <div className="divide-y divide-[var(--color-border-subtle)]">
+          <div className="flex items-center justify-between py-4">
+            <span className="text-sm text-[var(--color-text-secondary)]">Gross Revenue</span>
+            <span className="text-sm text-[var(--color-text-primary)] tabular-nums">{moneyFromFils(summary.gross_revenue_fils, currency)}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-[#E07A3C]/5">
-            <span className="text-[#E07A3C] font-light">Commission Earned (25%)</span>
-            <span className="text-[#E07A3C] font-light tabular-nums flex items-center gap-2">
+          <div className="flex items-center justify-between py-4">
+            <span className="text-sm text-[var(--color-accent-primary)]">Commission Earned</span>
+            <span className="text-sm text-[var(--color-accent-primary)] tabular-nums flex items-center gap-2">
               <ArrowUpRight className="h-4 w-4" />
-              AED {summary.commissionEarned.toLocaleString()}
+              {moneyFromFils(summary.commission_earned_fils, currency)}
             </span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-[#111111] transition-all">
-            <span className="text-[#A0A0A0] font-light">Pending Payments</span>
-            <span className="text-[#FBBF24] font-light tabular-nums">AED {summary.pendingPayments.toLocaleString()}</span>
+          <div className="flex items-center justify-between py-4">
+            <span className="text-sm text-[var(--color-text-secondary)]">Pending Payments</span>
+            <span className="text-sm text-[var(--color-warning)] tabular-nums">{moneyFromFils(summary.pending_payments_fils, currency)}</span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-[#111111] transition-all">
-            <span className="text-[#A0A0A0] font-light">Refunds</span>
-            <span className="text-[#F87171] font-light tabular-nums flex items-center gap-2">
+          <div className="flex items-center justify-between py-4">
+            <span className="text-sm text-[var(--color-text-secondary)]">Refunds</span>
+            <span className="text-sm text-[var(--color-error)] tabular-nums flex items-center gap-2">
               <ArrowDownRight className="h-4 w-4" />
-              AED {summary.refunds.toLocaleString()}
+              {moneyFromFils(summary.refunds_fils, currency)}
             </span>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-[#111111] transition-all">
-            <span className="text-[#A0A0A0] font-light">Commission Clawbacks</span>
-            <span className="text-[#F87171] font-light tabular-nums flex items-center gap-2">
+          <div className="flex items-center justify-between py-4">
+            <span className="text-sm text-[var(--color-text-secondary)]">Commission Clawbacks</span>
+            <span className="text-sm text-[var(--color-error)] tabular-nums flex items-center gap-2">
               <ArrowDownRight className="h-4 w-4" />
-              AED {summary.clawbacks.toLocaleString()}
+              {moneyFromFils(summary.commission_clawbacks_fils, currency)}
             </span>
           </div>
 
-          <div className="flex items-center justify-between p-5 rounded-2xl bg-[#111111] mt-2">
-            <span className="text-white font-light text-lg">Estimated Payout</span>
+          <div className="flex items-center justify-between py-5">
+            <span className="text-base text-[var(--color-text-primary)]">Estimated Payout</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-white font-light text-2xl tabular-nums">
-                {summary.estimatedPayout.toLocaleString()}
+              <span className="text-2xl text-[var(--color-text-primary)] tabular-nums">
+                {numberFromFils(summary.estimated_payout_fils)}
               </span>
-              <span className="text-[#555555] text-sm">AED</span>
+              <span className="text-[var(--color-text-muted)] text-sm">{currency}</span>
             </div>
           </div>
         </div>
+
+        {analytics?.breakdown.by_vertical.length ? (
+          <div className="mt-6 divide-y divide-[var(--color-border-subtle)] border-t border-[var(--color-border-subtle)]">
+            {analytics.breakdown.by_vertical.map((vertical) => (
+              <div key={vertical.vertical} className="grid grid-cols-[1fr_auto_auto] items-center gap-6 py-4">
+                <span className="text-sm text-[var(--color-text-secondary)]">{vertical.vertical}</span>
+                <span className="text-xs text-[var(--color-text-muted)]">{vertical.bookings} bookings</span>
+                <span className="text-sm text-[var(--color-text-primary)] tabular-nums">
+                  {moneyFromFils(vertical.gross_revenue_fils, currency)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      {/* Divider */}
-      <div className="h-px bg-[#1F1F1F]" />
-
       {/* Recent Transactions */}
-      <div>
+      <div className="border-t border-[var(--color-border-subtle)] pt-8">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xs text-[#555555] uppercase tracking-wider">
+          <p className="text-[11px] text-[var(--color-text-soft)] uppercase tracking-[0.18em]">
             Recent Transactions
-          </h3>
+          </p>
           <Button variant="ghost" size="sm">
             View All
           </Button>
         </div>
 
-        <div className="space-y-2">
-          {transactions.map((txn) => (
+        <div className="divide-y divide-[var(--color-border-subtle)]">
+          {transactions.length === 0 ? (
+            <div className="py-10 text-sm text-[var(--color-text-muted)]">
+              No transactions in this period.
+            </div>
+          ) : transactions.map((txn) => (
             <div
-              key={txn.id}
-              className="flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:bg-[#111111] hover:border-[#1F1F1F] transition-all"
+              key={txn.transaction_id}
+              className="flex items-center gap-4 py-4"
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-1">
-                  <h4 className="text-white font-light">{txn.customer}</h4>
+                <div className="flex items-center gap-3">
+                  <p className="text-sm text-[var(--color-text-primary)]">{txn.member_name || txn.customer_name || "Member"}</p>
                   {txn.status === "refunded" && (
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-[#F87171]/10 text-[#F87171]">
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-[var(--color-error-light)] text-[var(--color-error)]">
                       Refunded
                     </span>
                   )}
+                  {txn.status === "pending_payment" && (
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-[var(--color-warning-light)] text-[var(--color-warning)]">
+                      Pending
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-[#555555]">
-                  <span>{txn.product}</span>
+                <div className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
+                  <span>{txn.product_name || txn.vertical}</span>
                   <span>·</span>
-                  <span>{formatDate(txn.date)}</span>
+                  <span>{formatDate(new Date(txn.paid_at ?? txn.created_at ?? ""))}</span>
+                  <span>·</span>
+                  <span>{txn.order_id}</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-8">
                 <div className="text-right">
-                  <p className="text-white font-light tabular-nums">AED {txn.gross}</p>
-                  <p className="text-xs text-[#555555]">Amount</p>
+                  <p className="text-sm text-[var(--color-text-primary)] tabular-nums">{moneyFromFils(txn.gross_amount_fils, currency)}</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">Amount</p>
                 </div>
                 <div className="text-right">
                   <p className={cn(
-                    "font-light tabular-nums",
-                    txn.commission > 0 ? "text-[#E07A3C]" : "text-[#555555]"
+                    "text-sm tabular-nums",
+                    txn.commission_fils > 0 ? "text-[var(--color-accent-primary)]" : "text-[var(--color-text-muted)]"
                   )}>
-                    {txn.commission > 0 ? `+${txn.commission}` : "—"}
+                    {txn.commission_fils > 0 ? `+${numberFromFils(txn.commission_fils)}` : "-"}
                   </p>
-                  <p className="text-xs text-[#555555]">Commission</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">Commission</p>
                 </div>
               </div>
             </div>
@@ -369,12 +408,14 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Footer Note */}
-      <div className="text-center py-6 border-t border-[#1F1F1F]">
-        <p className="text-xs text-[#555555]">
+      <div className="text-center py-6 border-t border-[var(--color-border-subtle)]">
+        <p className="text-xs text-[var(--color-text-muted)]">
           Estimated earnings. Final payout confirmed via monthly statement.
           Payouts are processed by the 10th of each month.
         </p>
       </div>
+      </>
+      )}
     </div>
   );
 }

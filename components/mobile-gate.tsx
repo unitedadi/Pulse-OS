@@ -21,34 +21,34 @@ export function MobileGate({ children }: { children: React.ReactNode }) {
   // Show nothing while checking (prevents flash)
   if (isMobile === null) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A]" />
+      <div className="min-h-screen bg-[var(--color-bg-primary)]" />
     );
   }
 
   // Show desktop-only message on mobile/tablet
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center p-8">
+      <div className="min-h-screen bg-[var(--color-bg-primary)] flex items-center justify-center p-8">
         <div className="max-w-md text-center">
           {/* Icon */}
-          <div className="h-20 w-20 rounded-full bg-[#1A1A1A] flex items-center justify-center mx-auto mb-8">
-            <Monitor className="h-10 w-10 text-[#E07A3C]" />
+          <div className="h-20 w-20 rounded-full bg-[var(--color-bg-secondary)] flex items-center justify-center mx-auto mb-8">
+            <Monitor className="h-10 w-10 text-[var(--color-accent-primary)]" />
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl font-light text-white mb-4">
+          <h1 className="text-3xl font-normal text-[var(--color-text-primary)] mb-4">
             Desktop Only
           </h1>
 
           {/* Description */}
-          <p className="text-[#666666] font-light leading-relaxed mb-8">
+          <p className="text-[var(--color-text-muted)] leading-relaxed mb-8">
             Pulse OS is optimized for desktop browsers. Please open this page on a laptop or desktop computer for the best experience.
           </p>
 
           {/* URL hint */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1A1A1A] border border-[#2A2A2A]">
-            <span className="text-sm text-[#555555]">Visit</span>
-            <span className="text-sm text-white font-light">pulse-os.vercel.app</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[var(--color-border-default)] shadow-[var(--shadow-sm)]">
+            <span className="text-sm text-[var(--color-text-muted)]">Visit</span>
+            <span className="text-sm text-[var(--color-text-primary)]">pulse-os.vercel.app</span>
           </div>
         </div>
       </div>

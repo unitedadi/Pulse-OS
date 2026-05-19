@@ -26,16 +26,16 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
         )}
         {...props}
       >
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A] mb-5">
-          {icon || <Inbox className="h-7 w-7 text-[#666666]" />}
+        <div className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-xl)] bg-[var(--color-bg-secondary)] border border-[var(--color-border-subtle)] mb-5">
+          {icon || <Inbox className="h-7 w-7 text-[var(--color-text-muted)]" />}
         </div>
 
-        <h3 className="text-lg font-normal text-white mb-2">
+        <h3 className="text-lg font-normal text-[var(--color-text-primary)] mb-2">
           {title}
         </h3>
 
         {description && (
-          <p className="text-[#666666] max-w-sm mb-6">
+          <p className="text-[var(--color-text-muted)] max-w-sm mb-6">
             {description}
           </p>
         )}

@@ -2,17 +2,24 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import {
-  Button,
-  EmptyState,
-  StatusBadge,
-  Avatar,
-} from "@/components/ui";
-import { Plus, Clock, Search, X } from "lucide-react";
+import { ArrowUpRight, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
+import { Button, EmptyState, StatusBadge } from "@/components/ui";
+import { usePartnerContext } from "@/components/layouts";
 import { cn } from "@/lib/utils";
+import {
+  bookingAddressLabel,
+  bookingCustomerName,
+  bookingTitle,
+  fetchCustomerBookings,
+  formatMoneyFromFils,
+  formatShortDate,
+  formatTimeRange,
+  parseBookingDate,
+  type CustomerBooking,
+  toBookingStatus,
+} from "@/lib/api/bookings";
 
-// Status filter tabs
 const STATUS_FILTERS = [
   { value: "all", label: "All" },
   { value: "upcoming", label: "Upcoming" },
@@ -20,7 +27,6 @@ const STATUS_FILTERS = [
   { value: "completed", label: "Completed" },
 ];
 
-// Date filter presets
 const DATE_FILTERS = [
   { value: "all", label: "Any time" },
   { value: "today", label: "Today" },
@@ -28,83 +34,6 @@ const DATE_FILTERS = [
   { value: "month", label: "This Month" },
 ];
 
-// Mock bookings data with images
-const MOCK_BOOKINGS = [
-  {
-    id: "BK-001",
-    customer: { name: "Sarah Chen", phone: "+971 50 123 4567" },
-    product: { name: "IV Therapy", category: "Wellness", image: "/services/skin-therapy.png" },
-    scheduledDate: new Date(2025, 0, 28, 10, 0),
-    location: "Dubai Marina",
-    status: "upcoming" as const,
-    amount: 450,
-    commission: 112,
-  },
-  {
-    id: "BK-002",
-    customer: { name: "Mohammed Al-Hassan", phone: "+971 55 234 5678" },
-    product: { name: "Vitamin Infusion", category: "Wellness", image: "/services/skin-therapy.png" },
-    scheduledDate: new Date(2025, 0, 28, 14, 0),
-    location: "JBR",
-    status: "pending_payment" as const,
-    amount: 350,
-    commission: 87,
-  },
-  {
-    id: "BK-003",
-    customer: { name: "Emma Wilson", phone: "+971 52 345 6789" },
-    product: { name: "Blood Test", category: "Diagnostics", image: "/services/skin-therapy.png" },
-    scheduledDate: new Date(2025, 0, 27, 16, 30),
-    location: "Downtown Dubai",
-    status: "upcoming" as const,
-    amount: 200,
-    commission: 50,
-  },
-  {
-    id: "BK-004",
-    customer: { name: "Ahmed Khalid", phone: "+971 50 456 7890" },
-    product: { name: "Health Checkup", category: "Checkup", image: "/services/skin-therapy.png" },
-    scheduledDate: new Date(2025, 0, 24, 9, 0),
-    location: "Palm Jumeirah",
-    status: "completed" as const,
-    amount: 600,
-    commission: 150,
-  },
-  {
-    id: "BK-005",
-    customer: { name: "Lisa Park", phone: "+971 56 567 8901" },
-    product: { name: "IV Therapy", category: "Wellness", image: "/services/skin-therapy.png" },
-    scheduledDate: new Date(2025, 0, 23, 11, 0),
-    location: "Business Bay",
-    status: "completed" as const,
-    amount: 450,
-    commission: 112,
-  },
-  {
-    id: "BK-006",
-    customer: { name: "Omar Farouk", phone: "+971 54 678 9012" },
-    product: { name: "Vaccination", category: "Preventive", image: "/services/skin-therapy.png" },
-    scheduledDate: new Date(2025, 0, 22, 15, 0),
-    location: "Al Barsha",
-    status: "completed" as const,
-    amount: 150,
-    commission: 37,
-  },
-];
-
-// Service-based gradient backgrounds
-const getServiceGradient = (service: string) => {
-  const gradients: Record<string, string> = {
-    "IV Therapy": "from-amber-900/80 via-orange-950/60 to-black",
-    "Vitamin Infusion": "from-emerald-900/80 via-teal-950/60 to-black",
-    "Blood Test": "from-rose-900/80 via-red-950/60 to-black",
-    "Health Checkup": "from-sky-900/80 via-blue-950/60 to-black",
-    "Vaccination": "from-violet-900/80 via-purple-950/60 to-black",
-  };
-  return gradients[service] || "from-amber-900/80 via-orange-950/60 to-black";
-};
-
-// Date filtering helpers
 function isToday(date: Date) {
   const today = new Date();
   return date.toDateString() === today.toDateString();
@@ -127,66 +56,67 @@ function isThisMonth(date: Date) {
   return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
 }
 
-// Format date for display
-function formatDate(date: Date) {
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-
-  if (date.toDateString() === today.toDateString()) {
-    return "Today";
-  } else if (date.toDateString() === tomorrow.toDateString()) {
-    return "Tomorrow";
-  } else {
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-  }
-}
-
-function formatTime(date: Date) {
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 export default function BookingsPage() {
   const router = useRouter();
+  const { context, loading: contextLoading, error: contextError } = usePartnerContext();
+
   const [searchQuery, setSearchQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
   const [dateFilter, setDateFilter] = React.useState("all");
+  const [bookings, setBookings] = React.useState<CustomerBooking[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  // Filter bookings
-  const filteredBookings = MOCK_BOOKINGS.filter((booking) => {
-    // Status filter
-    if (statusFilter !== "all" && booking.status !== statusFilter) {
-      return false;
-    }
+  const loadBookings = React.useCallback(async () => {
+    if (!context?.customer_id) return;
 
-    // Date filter
-    if (dateFilter === "today" && !isToday(booking.scheduledDate)) {
-      return false;
+    setLoading(true);
+    setError(null);
+    try {
+      const items = await fetchCustomerBookings({
+        customerId: context.customer_id,
+      });
+      setBookings(items);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error ? loadError.message : "bookings_load_failed"
+      );
+    } finally {
+      setLoading(false);
     }
-    if (dateFilter === "week" && !isThisWeek(booking.scheduledDate)) {
-      return false;
-    }
-    if (dateFilter === "month" && !isThisMonth(booking.scheduledDate)) {
-      return false;
-    }
+  }, [context?.customer_id]);
 
-    // Search filter
+  React.useEffect(() => {
+    if (contextLoading) return;
+    if (!context?.customer_id) {
+      setLoading(false);
+      setError(contextError ?? "partner_context_missing");
+      return;
+    }
+    void loadBookings();
+  }, [context?.customer_id, contextError, contextLoading, loadBookings]);
+
+  const filteredBookings = bookings.filter((booking) => {
+    const status = toBookingStatus(booking.booking_status ?? booking.order_status);
+    if (statusFilter !== "all" && status !== statusFilter) return false;
+
+    const date = parseBookingDate(booking);
+    if (dateFilter === "today" && (!date || !isToday(date))) return false;
+    if (dateFilter === "week" && (!date || !isThisWeek(date))) return false;
+    if (dateFilter === "month" && (!date || !isThisMonth(date))) return false;
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return (
-        booking.customer.name.toLowerCase().includes(query) ||
-        booking.customer.phone.includes(query) ||
-        booking.id.toLowerCase().includes(query) ||
-        booking.product.name.toLowerCase().includes(query) ||
-        booking.location.toLowerCase().includes(query)
-      );
+      return [
+        bookingTitle(booking),
+        bookingCustomerName(booking),
+        booking.order_id,
+        booking.vertical,
+        bookingAddressLabel(booking.address),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
     }
 
     return true;
@@ -202,7 +132,6 @@ export default function BookingsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
       <div className="flex justify-end">
         <Link href="/bookings/new">
           <Button leftIcon={<Plus className="h-4 w-4" />}>
@@ -211,40 +140,39 @@ export default function BookingsPage() {
         </Link>
       </div>
 
-      {/* Search Bar */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[#555555]" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)]" />
         <input
           type="text"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(event) => setSearchQuery(event.target.value)}
           placeholder="Search customers, services, locations..."
-          className="w-full pl-11 pr-10 py-3 bg-transparent border border-[#2A2A2A] rounded-full text-white placeholder:text-[#555555] transition-colors text-sm font-light focus:border-[#E07A3C]/50"
-          style={{ outline: 'none', boxShadow: 'none' }}
+          className="w-full pl-11 pr-10 py-3 bg-transparent border border-[var(--color-border-default)] rounded-full text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors text-sm focus:border-[var(--color-accent-primary)]"
+          style={{ outline: "none", boxShadow: "none" }}
         />
         {searchQuery && (
           <button
+            type="button"
             onClick={() => setSearchQuery("")}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#555555] hover:text-white transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      {/* Filters Row */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
-        {/* Status Filter Tabs */}
         <div className="flex items-center gap-1">
           {STATUS_FILTERS.map((filter) => (
             <button
               key={filter.value}
+              type="button"
               onClick={() => setStatusFilter(filter.value)}
               className={cn(
                 "px-4 py-2 rounded-full text-sm font-light transition-all",
                 statusFilter === filter.value
-                  ? "bg-white text-[#0A0A0A]"
-                  : "text-[#555555] hover:text-white"
+                  ? "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)]"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]"
               )}
             >
               {filter.label}
@@ -252,20 +180,19 @@ export default function BookingsPage() {
           ))}
         </div>
 
-        {/* Divider */}
-        <div className="hidden sm:block w-px h-6 bg-[#2A2A2A]" />
+        <div className="hidden sm:block w-px h-6 bg-[var(--color-border-subtle)]" />
 
-        {/* Date Filter Tabs */}
         <div className="flex items-center gap-1">
           {DATE_FILTERS.map((filter) => (
             <button
               key={filter.value}
+              type="button"
               onClick={() => setDateFilter(filter.value)}
               className={cn(
                 "px-4 py-2 rounded-full text-sm font-light transition-all",
                 dateFilter === filter.value
-                  ? "bg-[#2A2A2A] text-white"
-                  : "text-[#555555] hover:text-white"
+                  ? "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)]"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]"
               )}
             >
               {filter.label}
@@ -274,27 +201,45 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      {/* Active Filters Indicator */}
       {hasActiveFilters && (
         <div className="flex items-center gap-3">
-          <span className="text-sm text-[#555555]">
+          <span className="text-sm text-[var(--color-text-muted)]">
             {filteredBookings.length} result{filteredBookings.length !== 1 ? "s" : ""}
           </span>
           <button
+            type="button"
             onClick={clearFilters}
-            className="text-sm text-[#E07A3C] hover:text-[#F5A66A] transition-colors"
+            className="text-sm text-[var(--color-accent-primary)] hover:text-[var(--color-accent-secondary)] transition-colors"
           >
             Clear filters
           </button>
         </div>
       )}
 
-      {/* Bookings Grid */}
-      {filteredBookings.length === 0 ? (
+      {loading ? (
+        <div className="py-20 text-center text-sm text-[var(--color-text-muted)]">
+          Loading bookings...
+        </div>
+      ) : error ? (
+        <div className="py-20">
+          <EmptyState
+            title="Couldn't load bookings"
+            description={`Refresh and try again. ${error}`}
+            action={{
+              label: "Refresh",
+              onClick: () => void loadBookings(),
+            }}
+          />
+        </div>
+      ) : filteredBookings.length === 0 ? (
         <div className="py-20">
           <EmptyState
             title="No bookings found"
-            description={hasActiveFilters ? "Try adjusting your search or filters" : "Create your first booking to get started"}
+            description={
+              hasActiveFilters
+                ? "Try adjusting your search or filters"
+                : "Create your first booking to get started"
+            }
             action={{
               label: hasActiveFilters ? "Clear Filters" : "Create Booking",
               onClick: hasActiveFilters ? clearFilters : () => router.push("/bookings/new"),
@@ -302,76 +247,58 @@ export default function BookingsPage() {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredBookings.map((booking) => (
-            <Link
-              key={booking.id}
-              href={`/bookings/${booking.id}`}
-              className="group block"
-            >
-              <div className="relative rounded-2xl overflow-hidden h-[200px]">
-                {/* Background Image */}
-                {booking.product.image && (
-                  <img
-                    src={booking.product.image}
-                    alt={booking.product.name}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                )}
-                {/* Gradient Overlay */}
-                <div
-                  className={cn(
-                    "absolute inset-0 bg-gradient-to-br",
-                    getServiceGradient(booking.product.name)
-                  )}
-                />
-
-                {/* Content */}
-                <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                  {/* Top Row */}
-                  <div className="flex items-start justify-between">
-                    <StatusBadge status={booking.status} />
-                    <span className="text-white/50 text-xs font-mono">{booking.id}</span>
-                  </div>
-
-                  {/* Bottom Row */}
-                  <div>
-                    <p className="text-white/50 text-xs uppercase tracking-widest mb-1">
-                      {booking.product.category}
-                    </p>
-                    <h3 className="text-2xl font-extralight text-white mb-3">
-                      {booking.product.name}
-                    </h3>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={booking.customer.name} size="sm" />
-                        <div>
-                          <p className="text-white text-sm font-light">{booking.customer.name}</p>
-                          <div className="flex items-center gap-1.5 text-white/50 text-xs">
-                            <Clock className="h-3 w-3" />
-                            <span>{formatDate(booking.scheduledDate)} · {formatTime(booking.scheduledDate)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-white font-light">
-                          <span className="text-white/50 text-xs">AED </span>
-                          {booking.amount}
-                        </p>
-                        {booking.commission > 0 && (
-                          <p className="text-[#E07A3C] text-xs">
-                            +{booking.commission}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+        <div className="divide-y divide-[var(--color-border-subtle)]">
+          {filteredBookings.map((booking) => {
+            const date = parseBookingDate(booking);
+            return (
+              <Link
+                key={booking.order_id}
+                href={`/bookings/${encodeURIComponent(booking.order_id)}?vertical=${encodeURIComponent(
+                  booking.vertical ?? ""
+                )}`}
+                className="group grid grid-cols-[120px_1fr_auto] items-center gap-6 py-4"
+              >
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-text-soft)]">
+                    {date ? formatShortDate(date) : "Date pending"}
+                  </p>
+                  <p className="mt-1 text-[var(--color-text-primary)] tabular-nums">
+                    {formatTimeRange(booking.start_at, booking.end_at)}
+                  </p>
                 </div>
-              </div>
-            </Link>
-          ))}
+
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm font-normal text-[var(--color-text-primary)]">
+                      {bookingTitle(booking)}
+                    </p>
+                    <StatusBadge
+                      status={toBookingStatus(booking.booking_status ?? booking.order_status)}
+                      size="sm"
+                    />
+                  </div>
+                  <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                    w/ {bookingCustomerName(booking)} ·{" "}
+                    {bookingAddressLabel(booking.address)} · {booking.order_id}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-5">
+                  <div className="text-right">
+                    <p className="text-[var(--color-text-primary)] tabular-nums">
+                      {formatMoneyFromFils(
+                        booking.amount_captured_aed_fils ?? booking.amount_expected_aed_fils,
+                        booking.currency_captured ?? booking.currency_expected
+                      )}
+                    </p>
+                  </div>
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-default)] text-[var(--color-text-muted)] transition-colors group-hover:border-[var(--color-accent-primary)] group-hover:text-[var(--color-accent-primary)]">
+                    <ArrowUpRight className="h-4 w-4" />
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

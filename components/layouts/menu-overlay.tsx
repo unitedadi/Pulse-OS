@@ -9,10 +9,7 @@ import { Avatar } from "@/components/ui";
 import {
   X,
   LayoutDashboard,
-  Calendar,
-  Users,
   TrendingUp,
-  Settings,
   Building2,
   Package,
   LogOut,
@@ -31,16 +28,6 @@ const mainNavItems: NavItem[] = [
     label: "Home",
     href: "/dashboard",
     icon: <LayoutDashboard className="h-5 w-5" />,
-  },
-  {
-    label: "Bookings",
-    href: "/bookings",
-    icon: <Calendar className="h-5 w-5" />,
-  },
-  {
-    label: "Customers",
-    href: "/customers",
-    icon: <Users className="h-5 w-5" />,
   },
   {
     label: "Analytics",
@@ -69,6 +56,8 @@ interface MenuOverlayProps {
   partner?: {
     name: string;
     logo?: string;
+    sellerId?: string;
+    customerId?: string;
   };
   userRole?: string;
 }
@@ -130,7 +119,7 @@ export function MenuOverlay({
         <span
           className={cn(
             "text-4xl md:text-5xl font-extralight tracking-tight leading-none transition-colors duration-200",
-            isActive ? "text-white" : "text-[#555555] group-hover:text-white"
+            isActive ? "text-[var(--color-text-inverse)]" : "text-white/45 group-hover:text-[var(--color-text-inverse)]"
           )}
         >
           {item.label}
@@ -138,7 +127,7 @@ export function MenuOverlay({
         <ArrowRight
           className={cn(
             "h-10 w-10 md:h-12 md:w-12 translate-y-1 transition-all duration-200 group-hover:translate-x-1",
-            isActive ? "text-[#E07A3C]" : "text-[#444444] group-hover:text-white"
+            isActive ? "text-[var(--color-accent-light)]" : "text-white/30 group-hover:text-[var(--color-text-inverse)]"
           )}
         />
       </Link>
@@ -148,7 +137,7 @@ export function MenuOverlay({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 bg-[#0A0A0A] transition-all duration-300",
+        "fixed inset-0 z-50 bg-[var(--color-bg-accent)] transition-all duration-300",
         isOpen
           ? "opacity-100 pointer-events-auto"
           : "opacity-0 pointer-events-none"
@@ -159,7 +148,7 @@ export function MenuOverlay({
         <button
           onClick={onClose}
           className={cn(
-            "p-2.5 -ml-2 rounded-full text-white/70 hover:bg-white hover:text-black transition-all duration-300",
+            "p-2.5 -ml-2 rounded-full text-white/70 hover:bg-white hover:text-[var(--color-accent-primary)] transition-all duration-300 active:scale-[0.98]",
             isOpen ? "rotate-0 opacity-100" : "rotate-90 opacity-0"
           )}
           style={{ transitionDelay: isOpen ? "100ms" : "0ms" }}
@@ -177,16 +166,6 @@ export function MenuOverlay({
             <NavLink key={item.href} item={item} index={index} />
           ))}
 
-          {/* Settings */}
-          <NavLink
-            item={{
-              label: "Settings",
-              href: "/settings",
-              icon: <Settings className="h-5 w-5" />,
-            }}
-            index={mainNavItems.length}
-          />
-
           {/* Admin Section */}
           {filterByRole(adminNavItems).length > 0 && userRole === "dardoc_admin" && (
             <>
@@ -197,7 +176,7 @@ export function MenuOverlay({
                 )}
                 style={{ transitionDelay: isOpen ? "450ms" : "0ms" }}
               >
-                <span className="text-xs text-[#444444] uppercase tracking-widest">
+                <span className="text-xs text-white/35 uppercase tracking-widest">
                   Admin
                 </span>
               </div>
@@ -224,15 +203,15 @@ export function MenuOverlay({
             <div className="flex items-center gap-4">
               <Avatar name={userName} size="lg" src={user?.imageUrl} />
               <div>
-                <p className="text-white font-light text-lg">{userName}</p>
-                <p className="text-sm text-[#555555]">
+                <p className="text-white font-normal text-lg">{userName}</p>
+                <p className="text-sm text-white/45">
                   {user?.primaryEmailAddress?.emailAddress}
                 </p>
               </div>
             </div>
             <button
               onClick={() => signOut()}
-              className="p-3 rounded-full text-[#555555] hover:text-[#F87171] hover:bg-[#F87171]/10 transition-colors"
+              className="p-3 rounded-full text-white/45 hover:text-white hover:bg-white/10 transition-colors"
               title="Sign out"
             >
               <LogOut className="h-5 w-5" />

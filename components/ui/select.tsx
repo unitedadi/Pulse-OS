@@ -62,9 +62,9 @@ export function Select({
   return (
     <div ref={containerRef} className="relative">
       {label && (
-        <label className="block text-xs text-[#666666] uppercase tracking-wider mb-2">
+        <label className="block text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
           {label}
-          {required && <span className="text-[#F87171] ml-1">*</span>}
+          {required && <span className="text-[var(--color-error)] ml-1">*</span>}
         </label>
       )}
 
@@ -73,22 +73,22 @@ export function Select({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "w-full flex items-center justify-between px-4 py-3 bg-[#0A0A0A] border rounded-xl text-left transition-all",
-          "focus:outline-none focus:ring-1 focus:ring-[#E07A3C]/20",
+          "w-full flex items-center justify-between px-4 py-3 bg-[var(--color-bg-card)] border rounded-[var(--radius-md)] text-left transition-all shadow-[var(--shadow-xs)]",
+          "focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)]/20",
           error
-            ? "border-[#F87171] focus:border-[#F87171]"
+            ? "border-[var(--color-error)] focus:border-[var(--color-error)]"
             : isOpen
-              ? "border-[#E07A3C]"
-              : "border-[#1F1F1F] hover:border-[#2A2A2A]",
+              ? "border-[var(--color-accent-primary)]"
+              : "border-[var(--color-border-default)] hover:border-[var(--color-border-hover)]",
           disabled && "opacity-50 cursor-not-allowed"
         )}
       >
-        <span className={cn("font-light", selectedOption ? "text-white" : "text-[#666666]")}>
+        <span className={cn(selectedOption ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]")}>
           {selectedOption?.label || placeholder}
         </span>
         <ChevronDown
           className={cn(
-            "h-4 w-4 text-[#666666] transition-transform",
+            "h-4 w-4 text-[var(--color-text-muted)] transition-transform",
             isOpen && "rotate-180"
           )}
         />
@@ -96,7 +96,7 @@ export function Select({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 mt-2 w-full py-1 bg-[#111111] border border-[#1F1F1F] rounded-xl shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 mt-2 w-full py-1 bg-[var(--color-bg-card)] border border-[var(--color-border-subtle)] rounded-[var(--radius-md)] shadow-[var(--shadow-lg)] max-h-60 overflow-auto">
           {options.map((option) => (
             <button
               key={option.value}
@@ -108,19 +108,19 @@ export function Select({
               className={cn(
                 "w-full flex items-center justify-between px-4 py-2.5 text-left transition-colors",
                 option.value === value
-                  ? "bg-[#E07A3C]/10 text-[#E07A3C]"
-                  : "text-white hover:bg-[#1A1A1A]"
+                  ? "bg-[var(--color-bg-secondary)] text-[var(--color-accent-primary)]"
+                  : "text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]"
               )}
             >
-              <span className="font-light">{option.label}</span>
+              <span>{option.label}</span>
               {option.value === value && <Check className="h-4 w-4" />}
             </button>
           ))}
         </div>
       )}
 
-      {error && <p className="mt-1.5 text-sm text-[#F87171]">{error}</p>}
-      {hint && !error && <p className="mt-1.5 text-xs text-[#666666]">{hint}</p>}
+      {error && <p className="mt-1.5 text-sm text-[var(--color-error)]">{error}</p>}
+      {hint && !error && <p className="mt-1.5 text-xs text-[var(--color-text-muted)]">{hint}</p>}
     </div>
   );
 }

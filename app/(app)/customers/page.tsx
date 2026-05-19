@@ -198,27 +198,27 @@ export default function CustomersPage() {
         </div>
       ) : (
         <>
-          {/* Customer Cards */}
-          <div className="space-y-3">
+          {/* Customer List */}
+          <div className="divide-y divide-[var(--color-border-subtle)]">
             {paginatedCustomers.map((customer) => (
               <button
                 key={customer.id}
                 onClick={() => router.push(`/customers/${customer.id}`)}
-                className="w-full text-left group"
+                className="group w-full text-left"
               >
-                <div className="flex items-center gap-5 p-4 rounded-2xl border border-transparent hover:bg-[#111111] hover:border-[#1F1F1F] transition-all">
+                <div className="flex items-center gap-4 py-3">
                   {/* Avatar */}
                   <Avatar
                     name={`${customer.firstName} ${customer.lastName}`}
-                    size="lg"
+                    size="md"
                   />
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-light text-lg group-hover:text-white transition-colors">
+                    <p className="text-sm font-normal text-[var(--color-text-primary)] transition-colors">
                       {customer.firstName} {customer.lastName}
-                    </h3>
-                    <p className="text-sm text-[#555555] mt-1">
+                    </p>
+                    <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
                       {customer.phone}
                     </p>
                   </div>
@@ -226,30 +226,30 @@ export default function CustomersPage() {
                   {/* Stats - Right side */}
                   <div className="hidden sm:flex items-center gap-6">
                     <div className="text-right">
-                      <p className="text-lg font-extralight text-white tabular-nums">
+                      <p className="text-sm font-normal text-[var(--color-text-primary)] tabular-nums">
                         {customer.bookingCount}
                       </p>
-                      <p className="text-xs text-[#555555] uppercase tracking-wider">
+                      <p className="text-[10px] text-[var(--color-text-soft)] uppercase tracking-wider">
                         Bookings
                       </p>
                     </div>
 
                     <div className="text-right">
                       <div className="flex items-baseline gap-1 justify-end">
-                        <span className="text-[#555555] text-xs">AED</span>
-                        <span className="text-lg font-extralight text-[#E07A3C] tabular-nums">
+                        <span className="text-[var(--color-text-muted)] text-[10px]">AED</span>
+                        <span className="text-sm font-normal text-[var(--color-accent-primary)] tabular-nums">
                           {customer.totalSpent.toLocaleString()}
                         </span>
                       </div>
-                      <p className="text-xs text-[#555555] uppercase tracking-wider">
+                      <p className="text-[10px] text-[var(--color-text-soft)] uppercase tracking-wider">
                         Spent
                       </p>
                     </div>
                   </div>
 
                   {/* Arrow */}
-                  <div className="h-8 w-8 rounded-full border border-[#2A2A2A] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                    <ArrowUpRight className="h-4 w-4 text-white" />
+                  <div className="h-8 w-8 rounded-full border border-[var(--color-border-default)] flex items-center justify-center opacity-0 transition-all group-hover:opacity-100">
+                    <ArrowUpRight className="h-4 w-4 text-[var(--color-accent-primary)]" />
                   </div>
                 </div>
               </button>
