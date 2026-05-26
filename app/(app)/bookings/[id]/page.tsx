@@ -16,6 +16,7 @@ import {
   formatMoneyFromFils,
   formatTimeRange,
   parseDate,
+  statusDisplayLabel,
   type CustomerBooking,
   type OrderDetail,
   toBookingStatus,
@@ -196,7 +197,7 @@ export default function BookingDetailPage() {
                   <StatusBadge status={toBookingStatus(statusValue)} />
                   {orderStatus && (
                     <span className="rounded-full border border-[var(--color-border-subtle)] px-3 py-1 text-xs text-[var(--color-text-muted)]">
-                      Payment {String(orderStatus).replace(/_/g, " ").toLowerCase()}
+                      Payment {statusDisplayLabel(orderStatus)}
                     </span>
                   )}
                 </div>
@@ -293,8 +294,8 @@ export default function BookingDetailPage() {
                       )}
                       <div className="grid gap-1 py-3 sm:grid-cols-[150px_1fr]">
                         <p className="text-sm text-[var(--color-text-muted)]">Booking status</p>
-                        <p className="text-sm capitalize text-[var(--color-text-primary)]">
-                          {String(bookingStatus ?? "active").replace(/_/g, " ").toLowerCase()}
+                        <p className="text-sm text-[var(--color-text-primary)]">
+                          {statusDisplayLabel(bookingStatus)}
                         </p>
                       </div>
                     </div>

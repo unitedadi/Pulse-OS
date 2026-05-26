@@ -109,7 +109,7 @@ export type OrderDetail = {
   workflow?: { name?: string | null; version?: number | null } | null;
 };
 
-const DEFAULT_API_BASE_URL = "https://api.prod.dardoc.com";
+const DEFAULT_API_BASE_URL = "https://api-prod.dardoc.com";
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 
 function requireApiBaseUrl() {
@@ -369,6 +369,9 @@ export function toBookingStatus(value?: string | null): BookingStatus {
     case "PAID":
       return "paid";
     case "ACTIVE":
+    case "TRIALING":
+    case "TRAILING":
+      return "active";
     case "CREATED":
     case "CONFIRMED":
       return "upcoming";
@@ -388,6 +391,17 @@ export function toBookingStatus(value?: string | null): BookingStatus {
     default:
       return "upcoming";
   }
+}
+
+export function statusDisplayLabel(value?: string | null) {
+  const raw = String(value ?? "").trim();
+  const normalized = raw.replace(/_/g, " ").trim();
+  const uppercase = normalized.toUpperCase();
+  if (uppercase === "TRIALING" || uppercase === "TRAILING") return "ACTIVE";
+  if (!normalized) return "Active";
+  return normalized
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export function detailTitle(detail: OrderDetail, summary?: CustomerBooking | null) {

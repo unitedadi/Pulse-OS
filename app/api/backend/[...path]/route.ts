@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = "https://api.prod.dardoc.com";
+const DEFAULT_API_BASE_URL = "https://api-prod.dardoc.com";
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 
 type RouteContext = {

@@ -122,6 +122,7 @@ export type BookingStatus =
   | "pending_payment"
   | "expired"
   | "paid"
+  | "active"
   | "upcoming"
   | "in_progress"
   | "completed"

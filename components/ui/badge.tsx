@@ -69,6 +69,10 @@ const STATUS_CONFIG: Record<BookingStatus, { label: string; className: string }>
     label: "Paid",
     className: "bg-[var(--color-success-light)] text-[var(--color-status-paid)]",
   },
+  active: {
+    label: "ACTIVE",
+    className: "bg-[var(--color-success-light)] text-[var(--color-status-paid)]",
+  },
   upcoming: {
     label: "Upcoming",
     className: "bg-[var(--color-bg-secondary)] text-[var(--color-accent-primary)]",
