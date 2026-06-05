@@ -9,13 +9,17 @@ export const metadata: Metadata = {
   description: "Book and manage DarDoc services for your customers",
 };
 
+const clerkPublishableKey =
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ??
+  "pk_test_cXVhbGl0eS1yb2RlbnQtMzQuY2xlcmsuYWNjb3VudHMuZGV2JA";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider publishableKey={clerkPublishableKey}>
       <html lang="en">
         <body className="font-sans antialiased">
           <Providers>
