@@ -10,6 +10,10 @@ export type PulseWorkspaceSummary = {
   member_count: number;
 };
 
+const LEGACY_WORKSPACE_ALIASES_BY_SELLER_ID: Record<string, string[]> = {
+  seller_655656ac86b8: ["Demo B2B Partner"],
+};
+
 export function normalizePulseAccountId(value: string | null | undefined) {
   const text = String(value ?? "").trim().toLowerCase();
   return text.startsWith("mp_") ? text : "";
@@ -35,6 +39,9 @@ export function pulseAccountIdsForWorkspace(workspace: Pick<PulseWorkspaceSummar
     names.add(displayName.endsWith("Org") ? displayName : `${displayName} Org`);
   }
   if (sellerId) names.add(sellerId);
+  for (const alias of LEGACY_WORKSPACE_ALIASES_BY_SELLER_ID[sellerId] ?? []) {
+    names.add(alias);
+  }
 
   return Array.from(names)
     .map((name) => slugifyPulseAccountName(name))
