@@ -301,13 +301,14 @@ function NewBookingPageContent() {
     }
 
     const sellerId = context.seller_id;
+    const accountId = context.account_id;
     let cancelled = false;
 
     async function loadVerticals() {
       setVerticalsLoading(true);
       setVerticalsError(null);
       try {
-        const nextVerticals = await fetchSellerVerticals(sellerId);
+        const nextVerticals = await fetchSellerVerticals(sellerId, accountId);
         if (cancelled) return;
         setVerticals(nextVerticals);
         if (nextVerticals.length > 0) setSelectedVertical(nextVerticals[0]);
@@ -323,7 +324,7 @@ function NewBookingPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [context?.seller_id, contextError, contextLoading]);
+  }, [context?.account_id, context?.seller_id, contextError, contextLoading]);
 
   React.useEffect(() => {
     if (!context?.seller_id || !selectedVertical) {
@@ -332,6 +333,7 @@ function NewBookingPageContent() {
     }
 
     const sellerId = context.seller_id;
+    const accountId = context.account_id;
     const verticalId = selectedVertical.id;
     let cancelled = false;
 
@@ -342,7 +344,7 @@ function NewBookingPageContent() {
       setSelectedProducts([]);
       setCheckoutError(null);
       try {
-        const nextProducts = await fetchSellerProductsForVertical(sellerId, verticalId);
+        const nextProducts = await fetchSellerProductsForVertical(sellerId, verticalId, accountId);
         if (!cancelled) setProducts(nextProducts);
       } catch (error) {
         if (!cancelled) {
@@ -359,7 +361,7 @@ function NewBookingPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [context?.seller_id, selectedVertical]);
+  }, [context?.account_id, context?.seller_id, selectedVertical]);
 
   const selectedProductIds = React.useMemo(
     () => new Set(selectedProducts.map((product) => product.id)),
@@ -392,6 +394,7 @@ function NewBookingPageContent() {
           products: selectedProducts,
           returnUrl: `${origin}/bookings`,
           cancelUrl: `${origin}/bookings/new`,
+          accountId: context.account_id,
         });
         window.location.href = checkoutUrlForCurrentEnvironment(intent.checkout_url);
       } catch (error) {

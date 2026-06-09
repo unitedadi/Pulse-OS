@@ -1,3 +1,5 @@
+import { appendPulseAccountId } from "@/lib/pulse-account-selector";
+
 export type PulseVerticalId = "iv-drips" | "laboratory" | "peptides";
 
 export type PulseVerticalOption = {
@@ -332,15 +334,19 @@ async function fetchCatalog(
   definition: VerticalDefinition,
   sellerId: string,
   limit: number,
-  view: "basic" | "full" = "basic"
+  view: "basic" | "full" = "basic",
+  accountId?: string | null
 ) {
   const response = await fetch(
-    backendPath(definition.path, {
-      seller_id: sellerId,
-      view,
-      limit,
-      offset: 0,
-    }),
+    appendPulseAccountId(
+      backendPath(definition.path, {
+        seller_id: sellerId,
+        view,
+        limit,
+        offset: 0,
+      }),
+      accountId
+    ),
     {
       headers: {
         Accept: "application/json",
@@ -359,10 +365,10 @@ async function fetchCatalog(
   return payload ?? {};
 }
 
-export async function fetchSellerVerticals(sellerId: string) {
+export async function fetchSellerVerticals(sellerId: string, accountId?: string | null) {
   const results = await Promise.allSettled(
     VERTICALS.map(async (definition) => {
-      const payload = await fetchCatalog(definition, sellerId, 1);
+      const payload = await fetchCatalog(definition, sellerId, 1, "basic", accountId);
       const productCount = Number(payload.total_count ?? payload.products?.length ?? 0);
       if (productCount <= 0) return null;
       return {
@@ -379,11 +385,15 @@ export async function fetchSellerVerticals(sellerId: string) {
     .filter((vertical): vertical is PulseVerticalOption => Boolean(vertical));
 }
 
-export async function fetchSellerProductsForVertical(sellerId: string, verticalId: PulseVerticalId) {
+export async function fetchSellerProductsForVertical(
+  sellerId: string,
+  verticalId: PulseVerticalId,
+  accountId?: string | null
+) {
   const definition = VERTICALS.find((item) => item.id === verticalId);
   if (!definition) throw new Error("unsupported_vertical");
 
-  const payload = await fetchCatalog(definition, sellerId, 60, "full");
+  const payload = await fetchCatalog(definition, sellerId, 60, "full", accountId);
   return (payload.products ?? [])
     .map((product): PulseCatalogProduct | null => {
       const id = String(product.product_uuid ?? "").trim();

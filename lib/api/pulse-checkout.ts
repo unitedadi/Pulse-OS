@@ -1,3 +1,5 @@
+import { appendPulseAccountId } from "@/lib/pulse-account-selector";
+
 import type { PulseCatalogProduct } from "./pulse-catalog";
 
 type CreatePulseCheckoutIntentInput = {
@@ -6,6 +8,7 @@ type CreatePulseCheckoutIntentInput = {
   products: PulseCatalogProduct[];
   returnUrl: string;
   cancelUrl: string;
+  accountId?: string | null;
 };
 
 type CheckoutIntentResponse = {
@@ -35,10 +38,11 @@ export async function createPulseCheckoutIntent({
   products,
   returnUrl,
   cancelUrl,
+  accountId,
 }: CreatePulseCheckoutIntentInput) {
   if (products.length === 0) throw new Error("checkout_cart_empty");
 
-  const response = await fetch("/api/backend/checkout/intents", {
+  const response = await fetch(appendPulseAccountId("/api/backend/checkout/intents", accountId), {
     method: "POST",
     headers: {
       Accept: "application/json",
