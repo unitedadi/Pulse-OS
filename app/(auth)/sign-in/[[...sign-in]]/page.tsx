@@ -15,6 +15,7 @@ export default function SignInPage() {
           formFieldLabel: "text-[#173B3D] font-medium",
           formFieldInput:
             "border-[#173B3D]/15 focus:border-[#173B3D] focus:ring-[#173B3D]/15 rounded-[14px]",
+          footerAction: "hidden",
           footerActionLink: "text-[#173B3D] hover:text-[#2D6668]",
           identityPreviewEditButton: "text-[#173B3D]",
         },

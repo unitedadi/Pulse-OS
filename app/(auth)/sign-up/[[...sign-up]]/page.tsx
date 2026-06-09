@@ -1,6 +1,19 @@
 import { SignUp } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
 
-export default function SignUpPage() {
+type SignUpPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function SignUpPage({ searchParams }: SignUpPageProps) {
+  const params = searchParams ? await searchParams : {};
+  const ticket = params.__clerk_ticket;
+  const hasInvitationTicket = Array.isArray(ticket) ? Boolean(ticket[0]) : Boolean(ticket);
+
+  if (!hasInvitationTicket) {
+    redirect("/sign-in");
+  }
+
   return (
     <SignUp
       appearance={{
