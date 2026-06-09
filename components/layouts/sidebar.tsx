@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui";
+import { appendPulseAccountId, normalizePulseAccountId } from "@/lib/pulse-account-selector";
 import {
   LayoutDashboard,
   Users,
@@ -27,17 +28,19 @@ interface NavItem {
 function SidebarNavLink({
   item,
   pathname,
+  accountId,
   collapsed,
 }: {
   item: NavItem;
   pathname: string;
+  accountId?: string;
   collapsed: boolean;
 }) {
   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   return (
     <Link
-      href={item.href}
+      href={appendPulseAccountId(item.href, accountId)}
       className={cn(
         "group flex items-center gap-3 px-4 py-3 rounded-xl",
         "transition-all duration-200 ease-out",
@@ -147,6 +150,8 @@ export function Sidebar({
   onToggleCollapse,
 }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const accountId = normalizePulseAccountId(searchParams.get("account_id"));
 
   const filterByRole = (items: NavItem[]) => {
     return items.filter((item) => {
@@ -170,7 +175,7 @@ export function Sidebar({
         collapsed ? "justify-center px-3" : "justify-between px-5"
       )}>
         {!collapsed && (
-          <Link href="/dashboard" className="flex items-center gap-3">
+          <Link href={appendPulseAccountId("/dashboard", accountId)} className="flex items-center gap-3">
             {partner?.logo ? (
               <img
                 src={partner.logo}
@@ -198,7 +203,7 @@ export function Sidebar({
         )}
 
         {collapsed && (
-          <Link href="/dashboard">
+          <Link href={appendPulseAccountId("/dashboard", accountId)}>
             <div className="h-9 w-9 rounded-lg bg-[#E07A3C] flex items-center justify-center">
               <span className="text-white font-medium text-sm">
                 {partner?.name?.charAt(0) || "P"}
@@ -211,7 +216,7 @@ export function Sidebar({
       {/* Navigation */}
       <nav className="flex-1 px-3 py-6 space-y-1">
         {filterByRole(mainNavItems).map((item) => (
-          <SidebarNavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
+          <SidebarNavLink key={item.href} item={item} pathname={pathname} accountId={accountId} collapsed={collapsed} />
         ))}
 
         {/* Admin Section */}
@@ -226,7 +231,7 @@ export function Sidebar({
             )}
             {collapsed && <div className="h-px bg-[#1A1A1A] my-6 mx-2" />}
             {filterByRole(adminNavItems).map((item) => (
-              <SidebarNavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
+              <SidebarNavLink key={item.href} item={item} pathname={pathname} accountId={accountId} collapsed={collapsed} />
             ))}
           </>
         )}
@@ -237,6 +242,7 @@ export function Sidebar({
         <SidebarNavLink
           item={{ label: "Settings", href: "/settings", icon: <Settings className="h-5 w-5" /> }}
           pathname={pathname}
+          accountId={accountId}
           collapsed={collapsed}
         />
 

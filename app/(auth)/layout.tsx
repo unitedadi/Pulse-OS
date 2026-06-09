@@ -29,7 +29,7 @@ export default function AuthLayout({
           </p>
         </div>
 
-        <div className="bg-[var(--color-bg-card)] rounded-[var(--radius-xl)] shadow-[var(--shadow-md)] border border-[var(--color-border-subtle)] p-6">
+        <div className="flex justify-center">
           {children}
         </div>
 

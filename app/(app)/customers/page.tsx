@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button, Avatar } from "@/components/ui";
 import {
@@ -12,6 +12,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { appendPulseAccountId, normalizePulseAccountId } from "@/lib/pulse-account-selector";
 
 // Mock customers data
 const MOCK_CUSTOMERS = [
@@ -79,6 +80,8 @@ const MOCK_CUSTOMERS = [
 
 export default function CustomersPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const accountId = normalizePulseAccountId(searchParams.get("account_id"));
   const [searchQuery, setSearchQuery] = React.useState("");
   const [currentPage, setCurrentPage] = React.useState(1);
 
@@ -142,7 +145,7 @@ export default function CustomersPage() {
         </div>
 
         {/* Action Button */}
-        <Link href="/bookings/new">
+        <Link href={appendPulseAccountId("/bookings/new", accountId)}>
           <Button leftIcon={<Plus className="h-4 w-4" />}>
             New Customer
           </Button>
@@ -203,7 +206,7 @@ export default function CustomersPage() {
             {paginatedCustomers.map((customer) => (
               <button
                 key={customer.id}
-                onClick={() => router.push(`/customers/${customer.id}`)}
+                onClick={() => router.push(appendPulseAccountId(`/customers/${customer.id}`, accountId))}
                 className="group w-full text-left"
               >
                 <div className="flex items-center gap-4 py-3">

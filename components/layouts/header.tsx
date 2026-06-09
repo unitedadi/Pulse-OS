@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
+import { appendPulseAccountId, normalizePulseAccountId } from "@/lib/pulse-account-selector";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -15,6 +17,8 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick, currentTime, children }: HeaderProps) {
+  const searchParams = useSearchParams();
+  const accountId = normalizePulseAccountId(searchParams.get("account_id"));
 
   // Format time like Open.com
   const formatTime = (date: Date) => {
@@ -50,7 +54,7 @@ export function Header({ onMenuClick, currentTime, children }: HeaderProps) {
 
       {/* Center - Logo */}
       <Link
-        href="/dashboard"
+        href={appendPulseAccountId("/dashboard", accountId)}
         className="absolute left-1/2 -translate-x-1/2"
       >
         <img

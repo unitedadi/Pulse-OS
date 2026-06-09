@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import {
   Card,
   Button,
@@ -17,6 +17,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { appendPulseAccountId, normalizePulseAccountId } from "@/lib/pulse-account-selector";
 import type { TimeSlot } from "@/components/ui/time-slot-picker";
 
 // Mock booking data
@@ -64,7 +65,9 @@ const generateTimeSlots = (): TimeSlot[] => {
 export default function EditBookingPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const bookingId = params.id as string;
+  const accountId = normalizePulseAccountId(searchParams.get("account_id"));
 
   // Form state
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(
@@ -99,7 +102,7 @@ export default function EditBookingPage() {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
     setSaving(false);
-    router.push(`/bookings/${bookingId}`);
+    router.push(appendPulseAccountId(`/bookings/${bookingId}`, accountId));
   };
 
   const booking = MOCK_BOOKING;

@@ -6,6 +6,7 @@ import { ArrowUpRight, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { Button, EmptyState, StatusBadge } from "@/components/ui";
 import { usePartnerContext } from "@/components/layouts";
+import { appendPulseAccountId } from "@/lib/pulse-account-selector";
 import { cn } from "@/lib/utils";
 import {
   bookingAddressLabel,
@@ -59,6 +60,10 @@ function isThisMonth(date: Date) {
 export default function BookingsPage() {
   const router = useRouter();
   const { context, loading: contextLoading, error: contextError } = usePartnerContext();
+  const scopedHref = React.useCallback(
+    (href: string) => appendPulseAccountId(href, context?.account_id),
+    [context?.account_id]
+  );
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
@@ -133,7 +138,7 @@ export default function BookingsPage() {
   return (
     <div className="space-y-8">
       <div className="flex justify-end">
-        <Link href="/bookings/new">
+        <Link href={scopedHref("/bookings/new")}>
           <Button leftIcon={<Plus className="h-4 w-4" />}>
             New Booking
           </Button>
@@ -242,7 +247,7 @@ export default function BookingsPage() {
             }
             action={{
               label: hasActiveFilters ? "Clear Filters" : "Create Booking",
-              onClick: hasActiveFilters ? clearFilters : () => router.push("/bookings/new"),
+              onClick: hasActiveFilters ? clearFilters : () => router.push(scopedHref("/bookings/new")),
             }}
           />
         </div>
@@ -253,9 +258,11 @@ export default function BookingsPage() {
             return (
               <Link
                 key={booking.order_id}
-                href={`/bookings/${encodeURIComponent(booking.order_id)}?vertical=${encodeURIComponent(
-                  booking.vertical ?? ""
-                )}`}
+                href={scopedHref(
+                  `/bookings/${encodeURIComponent(booking.order_id)}?vertical=${encodeURIComponent(
+                    booking.vertical ?? ""
+                  )}`
+                )}
                 className="group grid grid-cols-[120px_1fr_auto] items-center gap-6 py-4"
               >
                 <div>

@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CalendarDays, CreditCard, Download, FileText, FlaskConical, MapPin, Phone, RefreshCw, UserRound } from "lucide-react";
 import { Avatar, StatusBadge } from "@/components/ui";
 import { useImmersiveMode, usePartnerContext } from "@/components/layouts";
+import { appendPulseAccountId } from "@/lib/pulse-account-selector";
 import {
   absoluteApiUrl,
   bookingFullAddressLabel,
@@ -72,6 +73,10 @@ export default function BookingDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { context, loading: contextLoading, error: contextError } = usePartnerContext();
+  const scopedHref = React.useCallback(
+    (href: string) => appendPulseAccountId(href, context?.account_id),
+    [context?.account_id]
+  );
   const orderId = String(params.id ?? "");
 
   useImmersiveMode();
@@ -162,7 +167,7 @@ export default function BookingDetailPage() {
         <div className="mb-8">
           <button
             type="button"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push(scopedHref("/dashboard"))}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-default)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent-primary)] hover:text-[var(--color-accent-primary)]"
             aria-label="Back to home"
           >
@@ -351,7 +356,7 @@ export default function BookingDetailPage() {
               <div className="flex flex-col gap-3 border-t border-[var(--color-border-subtle)] pt-6 sm:flex-row">
                 <button
                   type="button"
-                  onClick={() => router.push("/dashboard")}
+                  onClick={() => router.push(scopedHref("/dashboard"))}
                   className="inline-flex flex-1 items-center justify-center rounded-full border border-[var(--color-border-default)] px-6 py-3.5 text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-accent-primary)]"
                 >
                   Back home

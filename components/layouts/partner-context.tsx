@@ -9,6 +9,8 @@ export type PulsePartnerContext = {
   seller?: {
     display_name?: string | null;
   };
+  account_id?: string | null;
+  resolved_by?: string | null;
 };
 
 type PartnerContextValue = {

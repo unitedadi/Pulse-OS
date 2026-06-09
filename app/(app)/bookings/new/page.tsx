@@ -8,6 +8,7 @@ import { Check, Droplet, ExternalLink, FlaskConical, Pill, X } from "lucide-reac
 import { useImmersiveMode, usePartnerContext } from "@/components/layouts";
 import { Button } from "@/components/ui";
 import { createPulseCheckoutIntent } from "@/lib/api/pulse-checkout";
+import { appendPulseAccountId } from "@/lib/pulse-account-selector";
 import {
   fetchSellerProductsForVertical,
   fetchSellerVerticals,
@@ -273,6 +274,10 @@ function ProductDetails({
 function NewBookingPageContent() {
   const router = useRouter();
   const { context, loading: contextLoading, error: contextError } = usePartnerContext();
+  const scopedHref = React.useCallback(
+    (href: string) => appendPulseAccountId(href, context?.account_id),
+    [context?.account_id]
+  );
   useImmersiveMode();
 
   const [verticals, setVerticals] = React.useState<PulseVerticalOption[]>([]);
@@ -399,7 +404,7 @@ function NewBookingPageContent() {
   return (
     <div className="min-h-[100dvh] overflow-hidden bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
       <button
-        onClick={() => router.push("/dashboard")}
+        onClick={() => router.push(scopedHref("/dashboard"))}
         className="absolute left-6 top-6 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border-default)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-accent-primary)] hover:text-[var(--color-accent-primary)]"
       >
         <X className="h-5 w-5" />

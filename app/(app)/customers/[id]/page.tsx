@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Button, Avatar, StatusBadge } from "@/components/ui";
 import {
   X,
@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { appendPulseAccountId, normalizePulseAccountId } from "@/lib/pulse-account-selector";
 
 // Mock customer data
 const MOCK_CUSTOMER = {
@@ -84,7 +85,9 @@ const MOCK_BOOKINGS = [
 export default function CustomerDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const customerId = params.id as string;
+  const accountId = normalizePulseAccountId(searchParams.get("account_id"));
 
   // In real app, fetch customer by ID
   const customer = MOCK_CUSTOMER;
@@ -248,7 +251,7 @@ export default function CustomerDetailPage() {
           <Button
             size="sm"
             leftIcon={<Plus className="h-4 w-4" />}
-            onClick={() => router.push(`/bookings/new?customerId=${customerId}`)}
+            onClick={() => router.push(appendPulseAccountId(`/bookings/new?customerId=${customerId}`, accountId))}
           >
             New Booking
           </Button>
@@ -267,7 +270,7 @@ export default function CustomerDetailPage() {
             {bookings.map((booking) => (
               <button
                 key={booking.id}
-                onClick={() => router.push(`/bookings/${booking.id}`)}
+                onClick={() => router.push(appendPulseAccountId(`/bookings/${booking.id}`, accountId))}
                 className="w-full text-left group"
               >
                 <div className="flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:bg-[#111111] hover:border-[#1F1F1F] transition-all">
@@ -309,7 +312,7 @@ export default function CustomerDetailPage() {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent pointer-events-none">
         <div className="max-w-5xl mx-auto flex items-center justify-center gap-3 pointer-events-auto">
           <button
-            onClick={() => router.push(`/bookings/new?customerId=${customerId}`)}
+            onClick={() => router.push(appendPulseAccountId(`/bookings/new?customerId=${customerId}`, accountId))}
             className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black text-sm font-medium hover:bg-white/90 transition-all"
           >
             <Plus className="h-4 w-4" />

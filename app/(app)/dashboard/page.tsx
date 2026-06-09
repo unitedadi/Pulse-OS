@@ -5,6 +5,7 @@ import { ArrowUpRight, MapPin, RefreshCw, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { EmptyState, HeroBookingCard, StatusBadge } from "@/components/ui";
 import { usePartnerContext } from "@/components/layouts";
+import { appendPulseAccountId } from "@/lib/pulse-account-selector";
 import {
   bookingCustomerName,
   bookingTitle,
@@ -136,6 +137,10 @@ function BookingListRow({ booking, date, onClick }: BookingListRowProps) {
 export default function DashboardPage() {
   const router = useRouter();
   const { context, loading: contextLoading, error: contextError } = usePartnerContext();
+  const scopedHref = React.useCallback(
+    (href: string) => appendPulseAccountId(href, context?.account_id),
+    [context?.account_id]
+  );
 
   const [bookings, setBookings] = React.useState<CustomerBooking[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -199,7 +204,7 @@ export default function DashboardPage() {
         title="Create a booking"
         subtitle="Schedule wellness services in seconds."
         imageUrl="/services/create-booking.avif"
-        onClick={() => router.push("/bookings/new")}
+        onClick={() => router.push(scopedHref("/bookings/new"))}
       />
 
       {loading ? (
@@ -221,7 +226,7 @@ export default function DashboardPage() {
           description="Bookings created for this Pulse customer profile will appear here."
           action={{
             label: "Create booking",
-            onClick: () => router.push("/bookings/new"),
+            onClick: () => router.push(scopedHref("/bookings/new")),
           }}
         />
       ) : (
@@ -255,9 +260,11 @@ export default function DashboardPage() {
                     date={parseBookingDate(booking) ?? date}
                     onClick={() =>
                       router.push(
-                        `/bookings/${encodeURIComponent(booking.order_id)}?vertical=${encodeURIComponent(
-                          booking.vertical ?? ""
-                        )}`
+                        scopedHref(
+                          `/bookings/${encodeURIComponent(booking.order_id)}?vertical=${encodeURIComponent(
+                            booking.vertical ?? ""
+                          )}`
+                        )
                       )
                     }
                   />

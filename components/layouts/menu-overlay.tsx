@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui";
+import { appendPulseAccountId, normalizePulseAccountId } from "@/lib/pulse-account-selector";
 import {
   X,
   LayoutDashboard,
@@ -69,9 +70,11 @@ export function MenuOverlay({
   userRole = "staff",
 }: MenuOverlayProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const { signOut } = useClerk();
   const userName = user?.fullName || user?.firstName || "User";
+  const accountId = normalizePulseAccountId(searchParams.get("account_id"));
 
   const filterByRole = (items: NavItem[]) => {
     return items.filter((item) => {
@@ -106,7 +109,7 @@ export function MenuOverlay({
 
     return (
       <Link
-        href={item.href}
+        href={appendPulseAccountId(item.href, accountId)}
         onClick={onClose}
         className={cn(
           "group flex items-center gap-2 py-4 transition-all duration-300",
