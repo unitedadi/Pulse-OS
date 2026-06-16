@@ -5,6 +5,7 @@ const PULSE_ACCOUNT_SELECTOR_COOKIE_NAME = "pulse_os_account_id";
 
 // Public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
+  "/accept-invite(.*)",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks(.*)",
