@@ -7,6 +7,7 @@ import { useClerk, useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui";
 import { appendPulseAccountId, normalizePulseAccountId } from "@/lib/pulse-account-selector";
+import { isDardocPulseSeller } from "@/lib/pulse-sellers";
 import {
   LayoutDashboard,
   Users,
@@ -16,6 +17,8 @@ import {
   Package,
   ChevronLeft,
   LogOut,
+  PlusCircle,
+  UserRoundPlus,
 } from "lucide-react";
 
 interface NavItem {
@@ -36,7 +39,8 @@ function SidebarNavLink({
   accountId?: string;
   collapsed: boolean;
 }) {
-  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const hrefPathname = item.href.split("?")[0] || item.href;
+  const isActive = pathname === hrefPathname || pathname.startsWith(`${hrefPathname}/`);
 
   return (
     <Link
@@ -152,6 +156,26 @@ export function Sidebar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const accountId = normalizePulseAccountId(searchParams.get("account_id"));
+  const isDardocSeller = isDardocPulseSeller(partner?.sellerId);
+  const visibleMainNavItems = React.useMemo(
+    () =>
+      isDardocSeller
+        ? [
+            ...mainNavItems,
+            {
+              label: "Create partner",
+              href: "/dashboard?action=create_partner",
+              icon: <PlusCircle className="h-5 w-5" />,
+            },
+            {
+              label: "Book on behalf",
+              href: "/bookings/new?mode=behalf",
+              icon: <UserRoundPlus className="h-5 w-5" />,
+            },
+          ]
+        : mainNavItems,
+    [isDardocSeller]
+  );
 
   const filterByRole = (items: NavItem[]) => {
     return items.filter((item) => {
@@ -215,7 +239,7 @@ export function Sidebar({
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-6 space-y-1">
-        {filterByRole(mainNavItems).map((item) => (
+        {filterByRole(visibleMainNavItems).map((item) => (
           <SidebarNavLink key={item.href} item={item} pathname={pathname} accountId={accountId} collapsed={collapsed} />
         ))}
 

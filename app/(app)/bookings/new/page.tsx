@@ -2,13 +2,15 @@
 
 import * as React from "react";
 import { Suspense } from "react";
-import { useRouter } from "next/navigation";
-import { Check, Droplet, ExternalLink, FlaskConical, Pill, X } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Check, Copy, Droplet, ExternalLink, FlaskConical, Pill, Search, UserRoundPlus, X } from "lucide-react";
 
 import { useImmersiveMode, usePartnerContext } from "@/components/layouts";
 import { Button } from "@/components/ui";
 import { createPulseCheckoutIntent } from "@/lib/api/pulse-checkout";
+import { fetchPulseMembers, type PulseMemberOption } from "@/lib/api/pulse-members";
 import { appendPulseAccountId } from "@/lib/pulse-account-selector";
+import { isDardocPulseSeller } from "@/lib/pulse-sellers";
 import {
   fetchSellerProductsForVertical,
   fetchSellerVerticals,
@@ -70,6 +72,167 @@ function DetailRows({
         </div>
       ))}
     </div>
+  );
+}
+
+function memberMeta(member: PulseMemberOption) {
+  return [member.phone, member.email].filter(Boolean).join(" · ");
+}
+
+function MemberSelector({
+  members,
+  loading,
+  error,
+  query,
+  selectedMember,
+  onQueryChange,
+  onSelect,
+  onRetry,
+}: {
+  members: PulseMemberOption[];
+  loading: boolean;
+  error: string | null;
+  query: string;
+  selectedMember: PulseMemberOption | null;
+  onQueryChange: (value: string) => void;
+  onSelect: (member: PulseMemberOption) => void;
+  onRetry: () => void;
+}) {
+  return (
+    <section className="mb-8 overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)]/45">
+      <div className="grid gap-5 p-5 lg:grid-cols-[320px_1fr]">
+        <div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)]">
+            <UserRoundPlus className="h-5 w-5" />
+          </div>
+          <p className="mt-4 text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-soft)]">Book on behalf</p>
+          <h2 className="mt-2 text-2xl leading-tight text-[var(--color-text-primary)]">Choose registered member</h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
+            The checkout link will be created for this customer. They will finish member, address, slot, wallet, promo, and payment on checkout.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              placeholder="Search by name, phone, email, or customer ID"
+              className="h-12 w-full rounded-full border border-[var(--color-border-default)] bg-[var(--color-bg-card)] pl-11 pr-4 text-sm text-[var(--color-text-primary)] shadow-[var(--shadow-xs)] transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border-focus)]"
+              style={{ outline: "none" }}
+            />
+          </div>
+
+          <div className="max-h-[280px] overflow-y-auto rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-bg-primary)]">
+            {loading ? (
+              <div className="px-4 py-6 text-sm text-[var(--color-text-muted)]">Loading registered members...</div>
+            ) : error ? (
+              <div className="flex items-center justify-between gap-3 px-4 py-5">
+                <p className="text-sm text-[var(--color-error)]">{error}</p>
+                <Button size="sm" variant="ghost" onClick={onRetry}>
+                  Retry
+                </Button>
+              </div>
+            ) : members.length === 0 ? (
+              <div className="px-4 py-6 text-sm text-[var(--color-text-muted)]">No registered members found.</div>
+            ) : (
+              <div className="divide-y divide-[var(--color-border-subtle)]">
+                {members.map((member) => {
+                  const selected = selectedMember?.customerId === member.customerId;
+                  return (
+                    <button
+                      key={member.customerId}
+                      type="button"
+                      onClick={() => onSelect(member)}
+                      className={cn(
+                        "grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-3 text-left transition-colors",
+                        selected ? "bg-[var(--color-accent-primary)]/10" : "hover:bg-[var(--color-bg-secondary)]/70"
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-[var(--color-text-primary)]">{member.name}</p>
+                        <p className="mt-0.5 truncate text-xs text-[var(--color-text-muted)]">
+                          {memberMeta(member) || member.customerId}
+                        </p>
+                      </div>
+                      <span
+                        className={cn(
+                          "flex h-7 w-7 items-center justify-center rounded-full border transition-colors",
+                          selected
+                            ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)]"
+                            : "border-[var(--color-border-default)] text-transparent"
+                        )}
+                      >
+                        <Check className="h-4 w-4" />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CheckoutLinkPanel({
+  url,
+  expiresAt,
+  total,
+  member,
+}: {
+  url: string;
+  expiresAt?: string | null;
+  total: number;
+  member: PulseMemberOption | null;
+}) {
+  const [copied, setCopied] = React.useState(false);
+  const expiryDate = expiresAt ? new Date(expiresAt) : null;
+  const expiryLabel =
+    expiryDate && Number.isFinite(expiryDate.getTime())
+      ? expiryDate.toLocaleString("en-AE", {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : "Not provided";
+
+  async function copyLink() {
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  return (
+    <section className="mb-8 rounded-2xl border border-[var(--color-accent-primary)]/20 bg-[rgba(23,59,61,0.04)] p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-soft)]">Checkout link ready</p>
+          <h2 className="mt-2 text-xl text-[var(--color-text-primary)]">
+            {member ? `For ${member.name}` : "Generated checkout link"}
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            Total {formatAed(total)} · Expires {expiryLabel}
+          </p>
+          <p className="mt-3 truncate rounded-full border border-[var(--color-border-subtle)] bg-[var(--color-bg-card)] px-4 py-2 font-mono text-xs text-[var(--color-text-secondary)]">
+            {url}
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="accent" onClick={copyLink} leftIcon={copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}>
+            {copied ? "Copied" : "Copy link"}
+          </Button>
+          <Button variant="primary" onClick={() => window.open(url, "_blank")} rightIcon={<ExternalLink className="h-4 w-4" />}>
+            Open checkout
+          </Button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -273,6 +436,7 @@ function ProductDetails({
 
 function NewBookingPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { context, loading: contextLoading, error: contextError } = usePartnerContext();
   const scopedHref = React.useCallback(
     (href: string) => appendPulseAccountId(href, context?.account_id),
@@ -280,6 +444,8 @@ function NewBookingPageContent() {
   );
   useImmersiveMode();
 
+  const requestedBehalfMode = searchParams.get("mode") === "behalf";
+  const isBehalfMode = requestedBehalfMode && isDardocPulseSeller(context?.seller_id);
   const [verticals, setVerticals] = React.useState<PulseVerticalOption[]>([]);
   const [selectedVertical, setSelectedVertical] = React.useState<PulseVerticalOption | null>(null);
   const [verticalsLoading, setVerticalsLoading] = React.useState(true);
@@ -291,6 +457,55 @@ function NewBookingPageContent() {
   const [selectedProducts, setSelectedProducts] = React.useState<PulseCatalogProduct[]>([]);
   const [checkoutLoading, setCheckoutLoading] = React.useState(false);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
+  const [memberQuery, setMemberQuery] = React.useState("");
+  const [members, setMembers] = React.useState<PulseMemberOption[]>([]);
+  const [membersLoading, setMembersLoading] = React.useState(false);
+  const [membersError, setMembersError] = React.useState<string | null>(null);
+  const [selectedMember, setSelectedMember] = React.useState<PulseMemberOption | null>(null);
+  const [checkoutLink, setCheckoutLink] = React.useState<{
+    url: string;
+    expiresAt?: string | null;
+  } | null>(null);
+
+  const loadMembers = React.useCallback(async () => {
+    if (!isBehalfMode) return;
+
+    setMembersLoading(true);
+    setMembersError(null);
+    try {
+      const result = await fetchPulseMembers({
+        query: memberQuery,
+        accountId: context?.account_id,
+        limit: 100,
+      });
+      setMembers(result.members);
+      setSelectedMember((current) => {
+        if (!current) return null;
+        return result.members.some((member) => member.customerId === current.customerId) ? current : null;
+      });
+    } catch (error) {
+      setMembers([]);
+      setMembersError(error instanceof Error ? error.message : "members_load_failed");
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [context?.account_id, isBehalfMode, memberQuery]);
+
+  React.useEffect(() => {
+    if (!isBehalfMode) {
+      setMembers([]);
+      setSelectedMember(null);
+      setMembersError(null);
+      setMembersLoading(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void loadMembers();
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [isBehalfMode, loadMembers]);
 
   React.useEffect(() => {
     if (contextLoading) return;
@@ -343,6 +558,7 @@ function NewBookingPageContent() {
       setSelectedProduct(null);
       setSelectedProducts([]);
       setCheckoutError(null);
+      setCheckoutLink(null);
       try {
         const nextProducts = await fetchSellerProductsForVertical(sellerId, verticalId, accountId);
         if (!cancelled) setProducts(nextProducts);
@@ -369,10 +585,12 @@ function NewBookingPageContent() {
   );
   const selectedCount = selectedProducts.length;
   const selectedTotal = selectedProducts.reduce((sum, product) => sum + product.price, 0);
+  const checkoutCustomerReady = isBehalfMode ? Boolean(selectedMember?.customerId) : Boolean(context?.customer_id);
 
   function toggleProduct(product: PulseCatalogProduct) {
     setSelectedProduct(product);
     setCheckoutError(null);
+    setCheckoutLink(null);
     setSelectedProducts((current) => {
       if (current.some((item) => item.id === product.id)) {
         return current.filter((item) => item.id !== product.id);
@@ -382,22 +600,32 @@ function NewBookingPageContent() {
   }
 
   async function handleCreateCheckout() {
-    if (!context?.seller_id || !context.customer_id || selectedProducts.length === 0 || checkoutLoading) return;
+    const customerId = isBehalfMode ? selectedMember?.customerId : context?.customer_id;
+    if (!context?.seller_id || !customerId || selectedProducts.length === 0 || checkoutLoading) return;
 
     setCheckoutLoading(true);
     setCheckoutError(null);
+    setCheckoutLink(null);
     try {
       const origin = window.location.origin;
-        const intent = await createPulseCheckoutIntent({
-          sellerId: context.seller_id,
-          customerId: context.customer_id,
-          products: selectedProducts,
-          returnUrl: `${origin}/bookings`,
-          cancelUrl: `${origin}/bookings/new`,
-          accountId: context.account_id,
+      const intent = await createPulseCheckoutIntent({
+        sellerId: context.seller_id,
+        customerId,
+        products: selectedProducts,
+        returnUrl: `${origin}/bookings`,
+        cancelUrl: isBehalfMode ? `${origin}/bookings/new?mode=behalf` : `${origin}/bookings/new`,
+        accountId: context.account_id,
+      });
+      const checkoutUrl = checkoutUrlForCurrentEnvironment(intent.checkout_url);
+      if (isBehalfMode) {
+        setCheckoutLink({
+          url: checkoutUrl,
+          expiresAt: intent.expires_at,
         });
-        window.location.href = checkoutUrlForCurrentEnvironment(intent.checkout_url);
-      } catch (error) {
+      } else {
+        window.location.href = checkoutUrl;
+      }
+    } catch (error) {
       setCheckoutError(error instanceof Error ? error.message : "checkout_link_failed");
     } finally {
       setCheckoutLoading(false);
@@ -416,12 +644,56 @@ function NewBookingPageContent() {
       <main className="h-[100dvh] overflow-y-auto pb-32">
         <div className="mx-auto max-w-7xl px-8 py-12">
           <header className="mb-8 max-w-3xl">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.22em] text-[var(--color-text-soft)]">New booking</p>
-            <h1 className="text-3xl font-normal text-[var(--color-text-primary)]">New Booking</h1>
+            <p className="mb-2 text-[11px] uppercase tracking-[0.22em] text-[var(--color-text-soft)]">
+              {isBehalfMode ? "DarDoc operator flow" : "New booking"}
+            </p>
+            <h1 className="text-3xl font-normal text-[var(--color-text-primary)]">
+              {isBehalfMode ? "Book on behalf" : "New Booking"}
+            </h1>
             <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">
-              Choose the seller&apos;s product here. Checkout will collect the member, address, slot, and payment.
+              {isBehalfMode
+                ? "Select a registered member, build their cart, then create a checkout link they can complete."
+                : "Choose the seller's product here. Checkout will collect the member, address, slot, and payment."}
             </p>
           </header>
+
+          {requestedBehalfMode && !isBehalfMode && !contextLoading && (
+            <section className="mb-8 rounded-2xl border border-[var(--color-error)]/20 bg-[var(--color-error-light)] p-5">
+              <p className="text-sm text-[var(--color-error)]">
+                Book on behalf is available only for the DarDoc Pulse seller.
+              </p>
+            </section>
+          )}
+
+          {isBehalfMode && (
+            <MemberSelector
+              members={members}
+              loading={membersLoading}
+              error={membersError}
+              query={memberQuery}
+              selectedMember={selectedMember}
+              onQueryChange={(value) => {
+                setMemberQuery(value);
+                setCheckoutError(null);
+                setCheckoutLink(null);
+              }}
+              onSelect={(member) => {
+                setSelectedMember(member);
+                setCheckoutError(null);
+                setCheckoutLink(null);
+              }}
+              onRetry={() => void loadMembers()}
+            />
+          )}
+
+          {checkoutLink && (
+            <CheckoutLinkPanel
+              url={checkoutLink.url}
+              expiresAt={checkoutLink.expiresAt}
+              total={selectedTotal}
+              member={selectedMember}
+            />
+          )}
 
           <section className="mb-8">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -448,6 +720,7 @@ function NewBookingPageContent() {
                         setSelectedProduct(null);
                         setSelectedProducts([]);
                         setCheckoutError(null);
+                        setCheckoutLink(null);
                       }}
                       className={cn(
                         "grid grid-cols-[44px_1fr_auto] items-center gap-4 rounded-lg border p-4 text-left transition-colors",
@@ -566,12 +839,18 @@ function NewBookingPageContent() {
             <p className="text-sm font-normal text-[var(--color-text-primary)]">
               {selectedCount > 0
                 ? `${selectedCount} item${selectedCount === 1 ? "" : "s"} selected`
-                : "Select products to create checkout"}
+                : isBehalfMode && !selectedMember
+                  ? "Select a member first"
+                  : "Select products to create checkout"}
             </p>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               {selectedCount > 0
-                ? `Total ${formatAed(selectedTotal)}`
-                : "Member, address, slot, and payment happen on checkout.dardoc.com."}
+                ? isBehalfMode && selectedMember
+                  ? `For ${selectedMember.name} · Total ${formatAed(selectedTotal)}`
+                  : `Total ${formatAed(selectedTotal)}`
+                : isBehalfMode
+                  ? "The checkout link will be generated for the selected registered member."
+                  : "Member, address, slot, and payment happen on checkout.dardoc.com."}
             </p>
             {checkoutError && (
               <p className="mt-2 text-xs text-[var(--color-error)]">{checkoutError}</p>
@@ -580,13 +859,13 @@ function NewBookingPageContent() {
 
           <Button
             variant="primary"
-            disabled={selectedCount === 0}
+            disabled={selectedCount === 0 || !checkoutCustomerReady}
             loading={checkoutLoading}
             onClick={handleCreateCheckout}
             rightIcon={<ExternalLink className="h-4 w-4" />}
             className="w-full sm:w-auto sm:min-w-[220px]"
           >
-            Continue to checkout
+            {isBehalfMode ? "Create checkout link" : "Continue to checkout"}
           </Button>
         </div>
       </div>

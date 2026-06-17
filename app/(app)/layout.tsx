@@ -12,6 +12,7 @@ import {
   appendPulseAccountId,
   PULSE_ACCOUNT_SELECTOR_COOKIE_NAME,
   PULSE_ACCOUNT_SELECTOR_STORAGE_KEY,
+  getKnownPulseAccountById,
   normalizePulseAccountId,
   pulseAccountIdsForWorkspace,
   type PulseWorkspaceSummary,
@@ -66,6 +67,39 @@ export default function AppRouteLayout({
       try {
         setContextError(null);
         if (selectedAccountId) {
+          const knownAccount = getKnownPulseAccountById(selectedAccountId);
+          if (knownAccount) {
+            const onboardingResponse = await fetch(
+              appendPulseAccountId(
+                `/api/backend/admin/partners/${encodeURIComponent(knownAccount.seller_id)}/onboarding`,
+                selectedAccountId
+              ),
+              { cache: "no-store" }
+            );
+            const onboardingPayload = (await onboardingResponse.json().catch(() => null)) as
+              | { customer_id?: string | null; status?: string | null }
+              | null;
+
+            if (!onboardingResponse.ok) throw new Error(`account_context_${onboardingResponse.status}`);
+            if (String(onboardingPayload?.status ?? "ACTIVE").toUpperCase() !== "ACTIVE") {
+              throw new Error("pulse_account_inactive");
+            }
+
+            if (!cancelled) {
+              setPartnerContext({
+                seller_id: knownAccount.seller_id,
+                customer_id: onboardingPayload?.customer_id || knownAccount.seller_id,
+                address_id: null,
+                seller: {
+                  display_name: knownAccount.display_name,
+                },
+                account_id: selectedAccountId,
+                resolved_by: "account_selector",
+              });
+            }
+            return;
+          }
+
           const workspacesResponse = await fetch(
             appendPulseAccountId("/api/backend/admin/partner-workspaces", selectedAccountId),
             { cache: "no-store" }
