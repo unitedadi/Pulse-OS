@@ -14,8 +14,7 @@ type CreatePulseCheckoutIntentInput = {
 type CheckoutIntentResponse = {
   checkout_intent_id: string;
   checkout_url: string;
-  contract_version: 2;
-  expires_at: string | null;
+  expires_at: string;
   status: string;
 };
 
@@ -52,17 +51,7 @@ export async function createPulseCheckoutIntent({
     body: JSON.stringify({
       seller_id: sellerId,
       platform: "b2b",
-      contract_version: 2,
       customer_id: customerId,
-      checkout_mode: "ASSISTED_CHECKOUT",
-      checkout_surface: "ASSISTED_FLOW",
-      start_step: "members",
-      edit_policy: {
-        members: "editable",
-        addresses: "editable",
-        timeslot: "editable",
-        promo: "editable",
-      },
       cart: cartForProducts(products),
       return_url: returnUrl,
       cancel_url: cancelUrl,
@@ -84,10 +73,6 @@ export async function createPulseCheckoutIntent({
 
   if (!payload?.checkout_url) {
     throw new Error("checkout_url_missing");
-  }
-
-  if (payload.contract_version !== 2) {
-    throw new Error("checkout_intent_v2_required");
   }
 
   return payload;

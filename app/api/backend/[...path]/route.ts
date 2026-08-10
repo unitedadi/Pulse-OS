@@ -1,5 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
-
 const DEFAULT_API_BASE_URL = "https://api-prod.dardoc.com";
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 
@@ -25,16 +23,6 @@ function proxyHeaders(request: Request) {
   if (contentType) headers.set("content-type", contentType);
   headers.set("ngrok-skip-browser-warning", "1");
 
-  return headers;
-}
-
-async function checkoutProducerHeaders(request: Request) {
-  const headers = proxyHeaders(request);
-  if (headers.has("authorization")) return headers;
-
-  const { getToken } = await auth();
-  const token = await getToken();
-  if (token) headers.set("authorization", `Bearer ${token}`);
   return headers;
 }
 
@@ -86,10 +74,7 @@ async function proxyPost(request: Request, context: RouteContext) {
   const upstream = await fetch(upstreamUrl, {
     method: "POST",
     cache: "no-store",
-    headers:
-      upstreamPath === "checkout/intents"
-        ? await checkoutProducerHeaders(request)
-        : proxyHeaders(request),
+    headers: proxyHeaders(request),
     body: await request.text(),
   });
 
